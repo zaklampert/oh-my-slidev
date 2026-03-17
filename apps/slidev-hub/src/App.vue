@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DeckRuntime as ProjectRuntime, DeckView as ProjectRecord } from '@myslides/shared-types'
+import type { DeckView as ProjectRecord } from '@myslides/shared-types'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const projects = ref<ProjectRecord[]>([])
@@ -169,6 +169,10 @@ function openUrl(url?: string) {
     window.open(url, '_blank', 'noopener')
 }
 
+function formatDate(value: string) {
+  return new Date(value).toLocaleString()
+}
+
 onMounted(async () => {
   await loadProjects()
   await loadLogs()
@@ -186,144 +190,185 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="shell">
-    <section class="masthead">
-      <div class="masthead-copy">
-        <p class="eyebrow">Slidev Control Room</p>
-        <h1>One hub for every deck, with each project keeping its own native Slidev server.</h1>
-        <p class="lede">
-          Create a new presentation, register an existing deck, then activate any number of projects with stable slug-based routes
-          for the deck, presenter mode, and overview.
-        </p>
-      </div>
+    <header class="topbar">
+      <h1>slidev-hub</h1>
+    </header>
 
-      <div class="status-strip">
-        <article>
-          <span class="metric">{{ projects.length }}</span>
-          <span class="label">Tracked decks</span>
-        </article>
-        <article>
-          <span class="metric">{{ runningProjects }}</span>
-          <span class="label">Active runtimes</span>
-        </article>
-        <article>
-          <span class="metric">{{ selectedProject?.runtime.port ?? '—' }}</span>
-          <span class="label">Selected port</span>
-        </article>
-      </div>
-    </section>
-
-    <section class="workspace">
-      <aside class="rail">
-        <div class="panel">
-          <div class="panel-header">
-            <h2>Create a managed deck</h2>
-            <p>Stored under the workspace’s `hub-projects` directory.</p>
+    <section class="dashboard">
+      <aside class="sidebar">
+        <article class="panel composer">
+          <div class="section-heading">
+            <p class="eyebrow">Add deck</p>
+            <h2>Start with a clean deck or bring an existing one in.</h2>
           </div>
 
-          <label class="field">
-            <span>Name</span>
-            <input
-              v-model="createName"
-              type="text"
-              placeholder="Quarterly kickoff"
-              @keydown.enter.prevent="createProject"
-            >
-          </label>
+          <div class="stack">
+            <label class="field">
+              <span>New deck name</span>
+              <input
+                v-model="createName"
+                type="text"
+                placeholder="Quarterly kickoff"
+                @keydown.enter.prevent="createProject"
+              >
+            </label>
 
-          <button class="action solid" :disabled="creating" @click="createProject">
-            {{ creating ? 'Creating…' : 'Create project' }}
-          </button>
-        </div>
-
-        <div class="panel">
-          <div class="panel-header">
-            <h2>Register an existing deck</h2>
-            <p>Point the hub at any folder that already contains `slides.md`.</p>
+            <button class="action solid" :disabled="creating" @click="createProject">
+              {{ creating ? 'Creating…' : 'Add new deck' }}
+            </button>
           </div>
 
-          <label class="field">
-            <span>Absolute path</span>
-            <input
-              v-model="importPath"
-              type="text"
-              placeholder="/Users/you/talks/kubecon-2026"
-              @keydown.enter.prevent="importProject"
-            >
-          </label>
+          <div class="divider" />
 
-          <button class="action outline" :disabled="importing" @click="importProject">
-            {{ importing ? 'Registering…' : 'Add existing project' }}
-          </button>
-        </div>
+          <div class="stack">
+            <label class="field">
+              <span>Existing deck path</span>
+              <input
+                v-model="importPath"
+                type="text"
+                placeholder="/Users/you/talks/kubecon-2026"
+                @keydown.enter.prevent="importProject"
+              >
+            </label>
 
-        <div v-if="errorMessage" class="panel alert">
-          <strong>Hub error</strong>
+            <button class="action subtle" :disabled="importing" @click="importProject">
+              {{ importing ? 'Importing…' : 'Import deck' }}
+            </button>
+          </div>
+        </article>
+
+        <article class="panel stats">
+          <div>
+            <span class="stat-value">{{ projects.length }}</span>
+            <span class="stat-label">Decks</span>
+          </div>
+          <div>
+            <span class="stat-value">{{ runningProjects }}</span>
+            <span class="stat-label">Live</span>
+          </div>
+        </article>
+
+        <article v-if="errorMessage" class="panel alert">
+          <p class="eyebrow">Hub error</p>
           <p>{{ errorMessage }}</p>
-        </div>
-
-        <div class="panel project-list">
-          <div class="panel-header">
-            <h2>Projects</h2>
-            <p v-if="loading">Refreshing registry…</p>
-            <p v-else>{{ projects.length }} available</p>
-          </div>
-
-          <button
-            v-for="project in projects"
-            :key="project.id"
-            class="project-card"
-            :class="{ active: selectedProject?.id === project.id }"
-            @click="selectedId = project.id"
-          >
-            <span class="project-status" :data-status="project.runtime.status">{{ project.isActive ? 'active' : project.runtime.status }}</span>
-            <strong>{{ project.name }}</strong>
-            <small>{{ project.source === 'external' ? 'external' : 'managed' }} · {{ project.slug }}{{ project.isActive ? ' · active' : '' }}</small>
-          </button>
-        </div>
+        </article>
       </aside>
 
-      <section class="detail">
-        <div v-if="selectedProject" class="detail-stack">
-          <header class="panel detail-header">
+      <section class="content">
+        <article class="panel decks-panel">
+          <div class="panel-topline">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h2>Your decks</h2>
+            </div>
+            <p class="status-note">{{ loading ? 'Refreshing…' : `${projects.length} total` }}</p>
+          </div>
+
+          <div v-if="projects.length" class="deck-grid">
+            <button
+              v-for="project in projects"
+              :key="project.id"
+              class="deck-card"
+              :class="{ active: selectedProject?.id === project.id }"
+              @click="selectedId = project.id"
+            >
+              <div class="deck-card-head">
+                <span class="badge" :data-status="project.runtime.status">
+                  {{ project.runtime.status === 'running' ? 'Live' : project.isActive ? 'Active' : project.runtime.status }}
+                </span>
+                <span class="deck-kind">{{ project.source === 'external' ? 'Imported' : 'Managed' }}</span>
+              </div>
+
+              <div class="deck-copy">
+                <strong>{{ project.name }}</strong>
+                <p>{{ project.slug }}</p>
+              </div>
+
+              <div class="deck-meta">
+                <span>{{ project.runtime.port ? `:${project.runtime.port}` : 'Not running' }}</span>
+                <span>Updated {{ formatDate(project.updatedAt) }}</span>
+              </div>
+
+              <div class="deck-actions">
+                <button
+                  v-if="project.runtime.status === 'running' || project.runtime.status === 'starting'"
+                  class="action subtle"
+                  :disabled="actingId === project.id"
+                  @click.stop="stopProject(project.id)"
+                >
+                  {{ actingId === project.id ? 'Stopping…' : 'Stop' }}
+                </button>
+                <button
+                  v-else
+                  class="action solid"
+                  :disabled="actingId === project.id"
+                  @click.stop="startProject(project.id)"
+                >
+                  {{ actingId === project.id ? 'Starting…' : 'Start' }}
+                </button>
+                <button class="action minimal" :disabled="!project.runtime.url" @click.stop="openUrl(project.runtime.url)">
+                  Deck
+                </button>
+                <button class="action minimal" :disabled="!project.runtime.presenterUrl" @click.stop="openUrl(project.runtime.presenterUrl)">
+                  Presenter
+                </button>
+              </div>
+            </button>
+          </div>
+
+          <div v-else class="empty-state">
+            <h3>No decks yet</h3>
+            <p>Add a new deck or import one from disk to populate the dashboard.</p>
+          </div>
+        </article>
+
+        <article v-if="selectedProject" class="panel selected-panel">
+          <div class="panel-topline">
             <div>
               <p class="eyebrow">Selected deck</p>
               <h2>{{ selectedProject.name }}</h2>
-              <p class="path">{{ selectedProject.dir }}</p>
             </div>
+            <span class="badge" :data-status="selectedProject.runtime.status">{{ selectedProject.runtime.status }}</span>
+          </div>
 
-            <div class="detail-actions">
-              <button
-                v-if="selectedProject.runtime.status === 'running' || selectedProject.runtime.status === 'starting'"
-                class="action ghost"
-                :disabled="actingId === selectedProject.id"
-                @click="stopProject(selectedProject.id)"
-              >
-                {{ actingId === selectedProject.id ? 'Deactivating…' : 'Deactivate' }}
-              </button>
-              <button
-                v-else
-                class="action solid"
-                :disabled="actingId === selectedProject.id"
-                @click="startProject(selectedProject.id)"
-              >
-                {{ actingId === selectedProject.id ? 'Activating…' : 'Activate presentation' }}
-              </button>
-              <button class="action outline" :disabled="!selectedProject.runtime.url" @click="openUrl(selectedProject.runtime.url)">
-                Open deck
-              </button>
-              <button class="action outline" :disabled="!selectedProject.runtime.presenterUrl" @click="openUrl(selectedProject.runtime.presenterUrl)">
-                Open presenter
-              </button>
-              <button class="action outline" :disabled="!selectedProject.runtime.overviewUrl" @click="openUrl(selectedProject.runtime.overviewUrl)">
-                Open overview
-              </button>
+          <div class="selected-summary">
+            <div>
+              <span class="summary-label">Location</span>
+              <p>{{ selectedProject.dir }}</p>
             </div>
-          </header>
+            <div>
+              <span class="summary-label">Entry</span>
+              <p>{{ selectedProject.entry }}</p>
+            </div>
+            <div>
+              <span class="summary-label">Last updated</span>
+              <p>{{ formatDate(selectedProject.updatedAt) }}</p>
+            </div>
+          </div>
 
-          <div class="detail-grid">
-            <article class="panel metadata">
+          <div class="selected-actions">
+            <button class="action solid" :disabled="!selectedProject.runtime.url" @click="openUrl(selectedProject.runtime.url)">
+              Open deck
+            </button>
+            <button class="action subtle" :disabled="!selectedProject.runtime.presenterUrl" @click="openUrl(selectedProject.runtime.presenterUrl)">
+              Open presenter
+            </button>
+            <button class="action subtle" :disabled="!selectedProject.runtime.overviewUrl" @click="openUrl(selectedProject.runtime.overviewUrl)">
+              Open overview
+            </button>
+          </div>
+        </article>
+
+        <details v-if="selectedProject" class="panel advanced-panel">
+          <summary>
+            <span>Advanced</span>
+            <span class="summary-hint">Logs, runtime state, and debugging</span>
+          </summary>
+
+          <div class="advanced-grid">
+            <article class="advanced-card">
               <h3>Runtime</h3>
-              <dl>
+              <dl class="metadata">
                 <div>
                   <dt>Status</dt>
                   <dd>{{ selectedProject.runtime.status }}</dd>
@@ -337,69 +382,35 @@ onBeforeUnmount(() => {
                   <dd>{{ selectedProject.runtime.port ?? '—' }}</dd>
                 </div>
                 <div>
-                  <dt>Entry</dt>
-                  <dd>{{ selectedProject.entry }}</dd>
-                </div>
-                <div>
                   <dt>Created</dt>
-                  <dd>{{ new Date(selectedProject.createdAt).toLocaleString() }}</dd>
-                </div>
-                <div>
-                  <dt>Updated</dt>
-                  <dd>{{ new Date(selectedProject.updatedAt).toLocaleString() }}</dd>
+                  <dd>{{ formatDate(selectedProject.createdAt) }}</dd>
                 </div>
               </dl>
               <p v-if="selectedProject.runtime.error" class="runtime-error">{{ selectedProject.runtime.error }}</p>
             </article>
 
-            <article class="panel terminal">
+            <article class="advanced-card terminal">
               <div class="log-toolbar">
                 <div>
                   <h3>Logs</h3>
-                  <p class="path">{{ logView === 'project' ? (projectLogPath || selectedProject.runtime.logPath || 'No project log yet.') : (hubLogPath || 'No hub log yet.') }}</p>
+                  <p>{{ logView === 'project' ? (projectLogPath || selectedProject.runtime.logPath || 'No project log yet.') : (hubLogPath || 'No hub log yet.') }}</p>
                 </div>
-                <div class="detail-actions">
-                  <button class="action outline" :class="{ active: logView === 'project' }" @click="logView = 'project'">
-                    Project log
+                <div class="toggle-group">
+                  <button class="action minimal" :class="{ current: logView === 'project' }" @click="logView = 'project'">
+                    Project
                   </button>
-                  <button class="action outline" :class="{ active: logView === 'hub' }" @click="logView = 'hub'">
-                    Hub log
+                  <button class="action minimal" :class="{ current: logView === 'hub' }" @click="logView = 'hub'">
+                    Hub
                   </button>
-                  <button class="action ghost" @click="loadLogs">
-                    Refresh logs
+                  <button class="action minimal" @click="loadLogs">
+                    Refresh
                   </button>
                 </div>
               </div>
               <pre>{{ (logView === 'project' ? projectLogLines : hubLogLines).join('\n') || 'No logs yet.' }}</pre>
             </article>
           </div>
-
-          <article class="panel preview">
-            <div class="preview-header">
-              <div>
-                <p class="eyebrow">Live preview</p>
-                <h3>{{ selectedProject.runtime.url ? 'Active presentation route' : 'No active presentation yet' }}</h3>
-              </div>
-              <span class="badge" :data-status="selectedProject.runtime.status">{{ selectedProject.runtime.status }}</span>
-            </div>
-
-            <div class="preview-frame">
-              <iframe
-                v-if="selectedProject.runtime.url"
-                :src="selectedProject.runtime.url"
-                title="Slidev preview"
-              />
-              <div v-else class="empty-state">
-                <p>Activate the selected project to proxy the real Slidev UI here.</p>
-                <p>The hub can run multiple active Slidev runtimes and route each one through its project slug.</p>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <div v-else class="panel empty-detail">
-          <p>No project selected yet.</p>
-        </div>
+        </details>
       </section>
     </section>
   </main>
