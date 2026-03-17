@@ -67,6 +67,11 @@ export function createApiMiddleware(
       return true
     }
 
+    if (request.method === 'GET' && pathname === '/api/health') {
+      sendJson(response, 200, { ok: true })
+      return true
+    }
+
     if (request.method === 'GET' && pathname === '/api/auth/prompt') {
       const returnTo = url.searchParams.get('returnTo') || '/'
       sendHtml(response, 200, `<!doctype html>

@@ -56,7 +56,14 @@ export function sendAuthChallenge(response: ServerResponse) {
 
 export function createApiAuthMiddleware(): Connect.NextHandleFunction {
   return (request, response, next) => {
-    if (!request.url?.startsWith('/api/')) {
+    const pathname = request.url ? new URL(request.url, 'http://localhost').pathname : ''
+
+    if (!pathname.startsWith('/api/')) {
+      next()
+      return
+    }
+
+    if (pathname === '/api/health') {
       next()
       return
     }
