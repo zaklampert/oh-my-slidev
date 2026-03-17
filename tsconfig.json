@@ -21,6 +21,7 @@
   "include": [
     "./src/**/*.ts",
     "./src/**/*.vue",
+    "./packages/shared-types/**/*.ts",
     "./server/**/*.ts",
     "./vite.config.ts",
     "./tsconfig.server.json"

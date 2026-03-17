@@ -16,6 +16,8 @@ export type ProjectRuntimeView = DeckRuntime
 
 export interface ActiveRuntime {
   project: ProjectRecord
+  entry: string
+  wrapperDir: string
   port: number
   base: string
   status: RuntimeStatus

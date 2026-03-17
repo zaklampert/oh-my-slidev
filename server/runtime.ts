@@ -1,18 +1,23 @@
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { lstat, mkdir, readFile, readlink, rm, symlink, unlink, writeFile } from 'node:fs/promises'
 import { request as httpRequest } from 'node:http'
 import { createRequire } from 'node:module'
+import { resolve, relative } from 'node:path'
 import process from 'node:process'
 import { getPort } from 'get-port-please'
 import { getProjectLogPath, logHub, logProject } from './logs.js'
 import type { RegistryController } from './registry.js'
 import type { HubState } from './state.js'
 import type { ActiveRuntime, ProjectRuntimeView, ProjectView } from './types.js'
-import { publicBaseUrl, timestamp } from './config.js'
+import { packageRoot, publicBaseUrl, runtimeRoot, slidevHubEditorAddonRoot, timestamp } from './config.js'
+import YAML from 'yaml'
 
 const require = createRequire(import.meta.url)
 const slidevCliPath = require.resolve('@slidev/cli/bin/slidev.mjs')
 const STARTUP_TIMEOUT_MS = 20_000
 const HEALTHCHECK_INTERVAL_MS = 250
+const runtimePackageNodeModulesPath = resolve(packageRoot, 'node_modules')
 const publicBaseHost = publicBaseUrl
   ? (() => {
       try {
@@ -80,7 +85,7 @@ async function waitForRuntimeReady(runtime: ActiveRuntime) {
 function buildSlidevArgs(runtime: ActiveRuntime) {
   const args = [
     slidevCliPath,
-    runtime.project.entry,
+    runtime.entry,
     '--port',
     String(runtime.port),
     '--base',
@@ -96,6 +101,127 @@ function buildSlidevArgs(runtime: ActiveRuntime) {
   }
 
   return args
+}
+
+function toPosixPath(path: string) {
+  return path.replace(/\\/g, '/')
+}
+
+function resolveDeckLocalSpecifier(specifier: string, projectDir: string) {
+  if (!specifier)
+    return specifier
+  if (specifier.startsWith('/'))
+    return specifier
+  if (specifier.startsWith('@/'))
+    return resolve(projectDir, specifier.slice(2))
+  if (specifier.startsWith('.') || (!specifier.startsWith('@') && specifier.includes('/')))
+    return resolve(projectDir, specifier)
+  return specifier
+}
+
+function extractFrontmatter(markdown: string) {
+  const normalized = markdown.replace(/\r\n/g, '\n')
+  if (!normalized.startsWith('---\n'))
+    return {}
+
+  const end = normalized.indexOf('\n---\n', 4)
+  if (end === -1)
+    return {}
+
+  try {
+    return (YAML.parse(normalized.slice(4, end)) as Record<string, unknown> | null) ?? {}
+  }
+  catch {
+    return {}
+  }
+}
+
+async function readOriginalSlidevAddons(projectDir: string) {
+  const packageJsonPath = resolve(projectDir, 'package.json')
+  if (!existsSync(packageJsonPath))
+    return []
+
+  try {
+    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8')) as {
+      slidev?: {
+        addons?: string[]
+      }
+    }
+    return Array.isArray(packageJson.slidev?.addons)
+      ? packageJson.slidev.addons.map(addon => resolveDeckLocalSpecifier(addon, projectDir))
+      : []
+  }
+  catch {
+    return []
+  }
+}
+
+async function ensureNodeModulesLink(wrapperDir: string, projectDir: string) {
+  const wrapperNodeModulesPath = resolve(wrapperDir, 'node_modules')
+  const preferredTarget = existsSync(resolve(projectDir, 'node_modules'))
+    ? resolve(projectDir, 'node_modules')
+    : runtimePackageNodeModulesPath
+
+  try {
+    const stats = await lstat(wrapperNodeModulesPath)
+    if (stats.isSymbolicLink()) {
+      const currentTarget = await readlink(wrapperNodeModulesPath)
+      if (resolve(wrapperDir, currentTarget) === preferredTarget)
+        return
+    }
+    if (stats.isDirectory())
+      await rm(wrapperNodeModulesPath, { recursive: true, force: true })
+    else
+      await unlink(wrapperNodeModulesPath)
+  }
+  catch {
+    // No existing node_modules entry to replace.
+  }
+
+  await symlink(preferredTarget, wrapperNodeModulesPath)
+}
+
+async function ensureRuntimeWorkspace(project: ProjectView | ActiveRuntime['project']) {
+  const wrapperDir = resolve(runtimeRoot, project.slug)
+  await mkdir(wrapperDir, { recursive: true })
+
+  const source = await readFile(project.entry, 'utf8')
+  const headmatter = extractFrontmatter(source)
+  const wrapperHeadmatter: Record<string, unknown> = {
+    ...headmatter,
+  }
+
+  if (typeof wrapperHeadmatter.theme === 'string')
+    wrapperHeadmatter.theme = resolveDeckLocalSpecifier(wrapperHeadmatter.theme, project.dir)
+
+  if (Array.isArray(wrapperHeadmatter.addons)) {
+    wrapperHeadmatter.addons = wrapperHeadmatter.addons
+      .map(value => typeof value === 'string' ? resolveDeckLocalSpecifier(value, project.dir) : value)
+  }
+
+  delete wrapperHeadmatter.src
+  wrapperHeadmatter.editor = true
+  wrapperHeadmatter.src = toPosixPath(relative(wrapperDir, project.entry) || 'slides.md')
+
+  const wrapperSlidesPath = resolve(wrapperDir, 'slides.md')
+  await writeFile(wrapperSlidesPath, `---\n${YAML.stringify(wrapperHeadmatter).trimEnd()}\n---\n`)
+
+  const projectAddons = await readOriginalSlidevAddons(project.dir)
+  const wrapperPackageJson = {
+    name: `slidev-hub-runtime-${project.slug}`,
+    private: true,
+    type: 'module',
+    slidev: {
+      addons: [...new Set([...projectAddons, slidevHubEditorAddonRoot])],
+    },
+  }
+  await writeFile(resolve(wrapperDir, 'package.json'), `${JSON.stringify(wrapperPackageJson, null, 2)}\n`)
+  await ensureNodeModulesLink(wrapperDir, project.dir)
+
+  return {
+    entry: wrapperSlidesPath,
+    wrapperDir,
+  }
 }
 
 export interface RuntimeController {
@@ -163,9 +289,12 @@ export function createRuntimeController(
       portRange: [3030, 4000],
       host: 'localhost',
     })
+    const workspace = await ensureRuntimeWorkspace(project)
 
     const runtime: ActiveRuntime = {
       project,
+      entry: workspace.entry,
+      wrapperDir: workspace.wrapperDir,
       port,
       base: `/${project.slug}/`,
       status: 'starting',
@@ -180,13 +309,14 @@ export function createRuntimeController(
     appendRuntimeLog(runtime, `activate requested: ${reason}`)
     appendRuntimeLog(runtime, `internal port ${port}`)
     appendRuntimeLog(runtime, `base path ${runtime.base}`)
+    appendRuntimeLog(runtime, `runtime entry ${runtime.entry}`)
     logHub(`activating ${project.id} on internal port ${port} with base ${runtime.base}`)
 
     const child = spawn(
       process.execPath,
       buildSlidevArgs(runtime),
       {
-        cwd: project.dir,
+        cwd: runtime.wrapperDir,
         env: {
           ...process.env,
           FORCE_COLOR: '0',

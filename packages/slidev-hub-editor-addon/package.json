@@ -1,0 +1,5 @@
+{
+  "name": "slidev-hub-editor-addon",
+  "private": true,
+  "type": "module"
+}

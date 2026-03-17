@@ -35,10 +35,19 @@ These are now implementation constraints, not open guesses:
   - slugged deck asset/page traffic
   - root control-channel traffic such as `/@server-reactive/*`
 - root control-channel requests need deck context, currently inferred from `Referer`
+- root `@slidev/*` virtual-module requests also need deck context and must be rewritten to the deck base path
 - some slugged control writes must be rewritten before forwarding
 - nav sync payloads should preserve a valid `timer` shape to avoid presenter crashes
 - the published Slidev CLI exits immediately if spawned with stdin ignored; runtime launchers must keep stdin open
 - `slidev-hub` now has a valid standalone production path via `pnpm run build && pnpm start`
+- Railway deployment is valid via Docker plus a mounted `/data` volume
+- production gateway logic must also rewrite:
+  - Vite client host metadata so the browser does not target the internal deck runtime origin
+  - Slidev `env.ts` compiler flags so raw `__DEV__`-style tokens do not reach the browser
+- the active in-deck editor path is now a hub-managed addon, not Slidev's autosaving built-in `SideEditor`
+- runtime launch now goes through generated wrapper workspaces under `.slidev-hub/runtime/<slug>/`
+- wrapper workspaces preserve source headmatter, normalize local theme/addon references, and inject the `slidev-hub-editor-addon`
+- the custom editor keeps Slidev's existing editor mount points but replaces save semantics with explicit manual save and unsaved-change guards
 
 ## Target Package Split
 

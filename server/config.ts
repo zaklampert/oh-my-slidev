@@ -36,14 +36,15 @@ export const logsRoot = resolve(dataRoot, 'logs')
 export const projectsLogsRoot = resolve(logsRoot, 'projects')
 export const hubLogPath = resolve(logsRoot, 'hub.log')
 export const agentDataRoot = resolve(dataRoot, 'agent')
+export const runtimeRoot = resolve(dataRoot, 'runtime')
 export const managedProjectsRoot = resolveEnvPath(
   process.env.SLIDEV_HUB_PROJECTS_ROOT,
   railwayVolumeRoot ? resolve(dataRoot, 'projects') : resolve(workspaceRoot, 'hub-projects'),
 )
 export const hubPort = Number(process.env.PORT || 4310)
 export const publicBaseUrl = normalizePublicBaseUrl(process.env.SLIDEV_HUB_PUBLIC_BASE_URL)
-export const hostedEditorAutosaveMs = Number(process.env.SLIDEV_HUB_HOSTED_EDITOR_AUTOSAVE_MS || (publicBaseUrl ? 2000 : 500))
 export const slidevAgentRoot = resolve(packageRoot, '../slidev-agent')
+export const slidevHubEditorAddonRoot = resolve(packageRoot, 'packages/slidev-hub-editor-addon')
 export const slidevAgentSkillsRoot = resolve(
   process.env.SLIDEV_AGENT_SKILLS_ROOT || resolve(slidevAgentRoot, 'skills'),
 )
@@ -93,6 +94,7 @@ export async function ensureDataLayout() {
   await mkdir(projectsLogsRoot, { recursive: true })
   await mkdir(managedProjectsRoot, { recursive: true })
   await mkdir(agentDataRoot, { recursive: true })
+  await mkdir(runtimeRoot, { recursive: true })
 
   if (!existsSync(registryPath))
     await writeFile(registryPath, JSON.stringify({ projects: [] }, null, 2))

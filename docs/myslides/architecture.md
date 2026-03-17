@@ -149,6 +149,8 @@ What it currently proves:
 - deck registry
 - multiple active deck runtimes
 - slug-based routing
+- wrapper-based deck runtime injection
+- custom in-deck editor injection through an addon, not a Slidev core fork
 - persistent hub and project logs
 - presenter and overview routing through the hub
 - presenter/viewer sync through the hub when the gateway preserves Slidev transport semantics
@@ -158,16 +160,27 @@ What the current implementation has taught us:
 - deck traffic is not simple prefix proxying
 - normal deck pages and assets should preserve the `/<slug>/...` path
 - root control channels like `/@server-reactive/*` and `/@server-ref/*` must be routed by deck context
+- root `@slidev/*` requests also need deck context and must be rewritten onto the active deck base path
 - presenter sync depends on Slidev's Vite/HMR-style transport, not just static HTTP routes
 - malformed nav sync payloads can break presenter UI unless the gateway preserves required state shape
 - a standalone hub can launch published `@slidev/cli` runtimes without importing Slidev source internals
 - the published Slidev CLI must be spawned with a live stdin stream; if stdin is ignored it exits immediately after boot
+- public deployments need the runtime gateway to rewrite Vite client host metadata so the browser does not try to connect to the internal runtime origin
+- some proxied Slidev client modules can reach the browser with unresolved compile-time flags, so the gateway currently rewrites those responses
+- replacing the in-deck editor cleanly is viable through addon-provided Vite aliasing against the existing `SideEditor` mount point
+- the safest way to inject that addon without mutating source decks is to launch Slidev from generated wrapper workspaces that preserve source headmatter and package-level addons
+- manual-save editing inside Slidev is viable while still using Slidev's native slide patch endpoint to write the original deck file
 
 What it does not represent:
 
 - final repo structure
 - final API boundaries
 - final production deployment shape
+
+Current production note:
+
+- `slidev-hub` is now proven on Railway with a Docker-based deploy, `/data` volume persistence, and a public base URL
+- the remaining production complexity lives mostly in the gateway rules for Vite/Slidev virtual modules, not in process orchestration
 
 Treat it as a proving ground, not the final architecture.
 

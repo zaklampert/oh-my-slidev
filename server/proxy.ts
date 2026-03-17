@@ -1,7 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { request as httpRequest } from 'node:http'
 import { readFileSync } from 'node:fs'
-import { hostedEditorAutosaveMs } from './config.js'
 import { logHub } from './logs.js'
 import type { RuntimeController } from './runtime.js'
 
@@ -89,10 +88,6 @@ export function createProxyHandlers(runtime: RuntimeController) {
     return method === 'GET' && targetPath.includes('/@slidev/client/env.ts')
   }
 
-  function shouldRewriteSideEditorModule(targetPath: string, method: string) {
-    return method === 'GET' && targetPath.includes('/@slidev/client/internals/SideEditor.vue')
-  }
-
   function rewriteViteClient(body: Buffer, request: IncomingMessage, targetPort: number, runtimeBase: string) {
     const externalHost = getExternalHost(request, targetPort)
     const hostWithBase = `${externalHost}${runtimeBase}`
@@ -103,19 +98,11 @@ export function createProxyHandlers(runtime: RuntimeController) {
     return Buffer.from(rewritten)
   }
 
-  function rewriteSlidevEnvModule(body: Buffer, targetRuntime: { project: { entry: string } }) {
-    const hashRoute = isHashRouter(targetRuntime.project.entry)
+  function rewriteSlidevEnvModule(body: Buffer, targetRuntime: { entry: string }) {
+    const hashRoute = isHashRouter(targetRuntime.entry)
     const rewritten = body.toString('utf8')
       .replace(/\b__DEV__\b/g, 'true')
       .replace(/\b__SLIDEV_HASH_ROUTE__\b/g, hashRoute ? 'true' : 'false')
-
-    return Buffer.from(rewritten)
-  }
-
-  function rewriteSideEditorModule(body: Buffer) {
-    const rewritten = body
-      .toString('utf8')
-      .replace(/\{\s*throttle:\s*500\s*\}/, `{ throttle: ${hostedEditorAutosaveMs} }`)
 
     return Buffer.from(rewritten)
   }
@@ -252,20 +239,6 @@ export function createProxyHandlers(runtime: RuntimeController) {
             proxyRes.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
             proxyRes.on('end', () => {
               const rewrittenBody = rewriteSlidevEnvModule(Buffer.concat(chunks), target.runtime)
-              response.writeHead(proxyRes.statusCode || 500, {
-                ...proxyRes.headers,
-                'content-length': String(rewrittenBody.length),
-              })
-              response.end(rewrittenBody)
-            })
-            return
-          }
-
-          if (shouldRewriteSideEditorModule(target.path, method)) {
-            const chunks: Buffer[] = []
-            proxyRes.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
-            proxyRes.on('end', () => {
-              const rewrittenBody = rewriteSideEditorModule(Buffer.concat(chunks))
               response.writeHead(proxyRes.statusCode || 500, {
                 ...proxyRes.headers,
                 'content-length': String(rewrittenBody.length),
