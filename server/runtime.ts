@@ -7,7 +7,7 @@ import { getProjectLogPath, logHub, logProject } from './logs.js'
 import type { RegistryController } from './registry.js'
 import type { HubState } from './state.js'
 import type { ActiveRuntime, ProjectRuntimeView, ProjectView } from './types.js'
-import { timestamp } from './config.js'
+import { publicBaseUrl, timestamp } from './config.js'
 
 const require = createRequire(import.meta.url)
 const slidevCliPath = require.resolve('@slidev/cli/bin/slidev.mjs')
@@ -68,7 +68,7 @@ async function waitForRuntimeReady(runtime: ActiveRuntime) {
 }
 
 function buildSlidevArgs(runtime: ActiveRuntime) {
-  return [
+  const args = [
     slidevCliPath,
     runtime.project.entry,
     '--port',
@@ -78,6 +78,14 @@ function buildSlidevArgs(runtime: ActiveRuntime) {
     '--log',
     'error',
   ]
+
+  if (publicBaseUrl) {
+    args.push('--remote')
+    args.push('--bind')
+    args.push('0.0.0.0')
+  }
+
+  return args
 }
 
 export interface RuntimeController {
