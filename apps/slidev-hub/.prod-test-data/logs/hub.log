@@ -1,0 +1,13 @@
+[2026-03-17T10:26:41.674Z] [hub] production server listening on http://localhost:4410
+[2026-03-17T10:26:47.291Z] [hub] GET /api/projects
+[2026-03-17T10:26:47.292Z] [hub] POST /api/projects/independent-hub-smoke-test-1773571183610/activate
+[2026-03-17T10:26:47.294Z] [hub] api error POST /api/projects/independent-hub-smoke-test-1773571183610/activate: Unknown project: independent-hub-smoke-test-1773571183610
+[2026-03-17T10:26:57.044Z] [hub] POST /api/projects
+[2026-03-17T10:26:57.048Z] [hub] created managed project railway-smoke-test-1773743217048 at /Users/zaklampert/projects/oh-my-slidev/slidev-hub/hub-projects/railway-smoke-test
+[2026-03-17T10:27:00.893Z] [hub] POST /api/projects/railway-smoke-test-1773743217048/activate
+[2026-03-17T10:27:00.901Z] [hub] activating railway-smoke-test-1773743217048 on internal port 3031 with base /railway-smoke-test/
+[2026-03-17T10:27:02.170Z] [hub] active runtime ready for railway-smoke-test-1773743217048 at /railway-smoke-test/
+[2026-03-17T10:27:05.096Z] [hub] HEAD /railway-smoke-test/
+[2026-03-17T10:27:05.096Z] [hub] proxy HEAD /railway-smoke-test/ -> /railway-smoke-test/ @ 3031
+[2026-03-17T10:27:05.106Z] [hub] HEAD /railway-smoke-test/presenter/
+[2026-03-17T10:27:05.106Z] [hub] proxy HEAD /railway-smoke-test/presenter/ -> /railway-smoke-test/presenter/ @ 3031

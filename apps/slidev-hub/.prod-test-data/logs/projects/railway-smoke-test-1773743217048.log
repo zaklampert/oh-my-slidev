@@ -1,0 +1,20 @@
+[2026-03-17T10:26:57.048Z] [project:railway-smoke-test-1773743217048] project created at /Users/zaklampert/projects/oh-my-slidev/slidev-hub/hub-projects/railway-smoke-test
+[2026-03-17T10:27:00.901Z] [project:railway-smoke-test-1773743217048] activate requested: manual activate
+[2026-03-17T10:27:00.901Z] [project:railway-smoke-test-1773743217048] internal port 3031
+[2026-03-17T10:27:00.901Z] [project:railway-smoke-test-1773743217048] base path /railway-smoke-test/
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout 
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout 
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   ●■▲
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   Slidev  v52.14.1 (global)
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout 
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   theme       @slidev/theme-default
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   css engine  unocss
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   entry       /Users/zaklampert/projects/oh-my-slidev/slidev-hub/hub-projects/railway-smoke-test/slides.md
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   public slide show   > http://localhost:3031/railway-smoke-test/
+[2026-03-17T10:27:02.013Z] [project:railway-smoke-test-1773743217048] stdout   presenter mode      > http://localhost:3031/railway-smoke-test/presenter/
+  slides overview     > http://localhost:3031/railway-smoke-test/overview/
+  export slides       > http://localhost:3031/railway-smoke-test/export/
+  remote control      > pass --remote to enable
+
+  shortcuts           > restart | open | edit | quit
+[2026-03-17T10:27:02.170Z] [project:railway-smoke-test-1773743217048] runtime listening on internal port 3031
