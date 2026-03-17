@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import type { Server as HttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { ViteDevServer } from 'vite'
@@ -8,6 +9,7 @@ import vue from '@vitejs/plugin-vue'
 import connect from 'connect'
 import sirv from 'sirv'
 import { createServer as createViteServer } from 'vite'
+import { createHubAgentController } from './agent.js'
 import { createApiMiddleware } from './api.js'
 import { ensureDataLayout, hubPort, logsRoot, managedProjectsRoot, packageRoot, statePath } from './config.js'
 import { logHub } from './logs.js'
@@ -44,6 +46,7 @@ async function saveHubState() {
 
 const registry = createRegistryController(state)
 const runtime = createRuntimeController(state, registry, saveHubState)
+const agent = createHubAgentController(registry)
 const proxy = createProxyHandlers(runtime)
 
 function isProduction() {
@@ -52,7 +55,7 @@ function isProduction() {
 
 async function createProductionServer() {
   const app = connect()
-  app.use(createApiMiddleware(registry, runtime))
+  app.use(createApiMiddleware(registry, runtime, agent))
   app.use(proxy.proxyHttpRequest)
   app.use(sirv(`${packageRoot}/dist/client`, { dev: false, single: true }))
   return createServer(app)
@@ -85,7 +88,7 @@ async function createDevelopmentServer() {
   })
 
   hubViteServer = vite
-  app.use(createApiMiddleware(registry, runtime))
+  app.use(createApiMiddleware(registry, runtime, agent))
   app.use(proxy.proxyHttpRequest)
   app.use(vite.middlewares)
 
