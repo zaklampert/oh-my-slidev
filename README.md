@@ -54,6 +54,8 @@ SLIDEV_HUB_PROJECTS_ROOT=/data/slidev-hub/projects
 4. Use the provided [`railway.json`](/Users/zaklampert/projects/oh-my-slidev/slidev-hub/railway.json) or equivalent commands:
 
 ```bash
+corepack enable
+pnpm install --frozen-lockfile
 pnpm run build
 pnpm start
 ```
@@ -63,6 +65,7 @@ Notes:
 - first boot on Railway will have an empty deck registry
 - decks, registry state, and logs should live on the persistent volume
 - presenter sync requires live Slidev runtimes; this is not a static-export deployment model
+- the Railway build explicitly reinstalls dependencies with pnpm so Linux native optional packages such as `@oxc-parser/binding-linux-x64-gnu` are present for Slidev runtimes
 
 ## Known Quirks
 
