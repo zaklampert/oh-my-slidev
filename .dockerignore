@@ -1,0 +1,14 @@
+.git
+.gitmodules
+.DS_Store
+node_modules
+.turbo
+.sources
+vendor
+apps/slidev-hub/node_modules
+apps/slidev-hub/dist
+apps/slidev-hub/.slidev-hub
+apps/slidev-hub/.legacy
+apps/slidev-hub/.prod-test-data
+hub-projects
+.slidev-hub
