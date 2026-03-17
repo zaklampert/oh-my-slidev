@@ -7,6 +7,17 @@ import { fileURLToPath } from 'node:url'
 const isProduction = process.env.NODE_ENV === 'production'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const resolveEnvPath = (value: string | undefined, fallback: string) => value ? resolve(value) : fallback
+const normalizePublicBaseUrl = (value: string | undefined) => {
+  const trimmed = value?.trim()
+  if (!trimmed)
+    return ''
+
+  const withProtocol = /^[a-z]+:\/\//i.test(trimmed)
+    ? trimmed
+    : `${isProduction ? 'https' : 'http'}://${trimmed}`
+
+  return withProtocol.replace(/\/+$/, '')
+}
 const railwayVolumeRoot = process.env.RAILWAY_VOLUME_MOUNT_PATH
   ? resolve(process.env.RAILWAY_VOLUME_MOUNT_PATH)
   : existsSync('/data')
@@ -29,7 +40,7 @@ export const managedProjectsRoot = resolveEnvPath(
   railwayVolumeRoot ? resolve(dataRoot, 'projects') : resolve(workspaceRoot, 'hub-projects'),
 )
 export const hubPort = Number(process.env.PORT || 4310)
-export const publicBaseUrl = process.env.SLIDEV_HUB_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '') || ''
+export const publicBaseUrl = normalizePublicBaseUrl(process.env.SLIDEV_HUB_PUBLIC_BASE_URL)
 
 export function timestamp() {
   return new Date().toISOString()
