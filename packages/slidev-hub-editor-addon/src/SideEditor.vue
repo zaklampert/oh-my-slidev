@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useEventListener } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useNav } from '@slidev/client/composables/useNav.ts'
 import { useDynamicSlideInfo } from '@slidev/client/composables/useSlideInfo.ts'
 import { editorHeight, editorWidth, isEditorVertical as vertical, showEditor } from '@slidev/client/state/index.ts'
@@ -28,6 +27,17 @@ const saveError = ref('')
 const pendingAction = ref<PendingAction | null>(null)
 const handlerDown = ref(false)
 const suppressNavigationGuard = ref(false)
+const disposers: Array<() => void> = []
+
+function listen<K extends keyof WindowEventMap>(
+  target: Window,
+  type: K,
+  listener: (event: WindowEventMap[K]) => void,
+  options?: boolean | AddEventListenerOptions,
+) {
+  target.addEventListener(type, listener as EventListener, options)
+  disposers.push(() => target.removeEventListener(type, listener as EventListener, options))
+}
 
 function syncDraftFromInfo(value: typeof info.value) {
   note.value = (value?.note || '').trim()
@@ -132,20 +142,6 @@ function cancelPendingAction() {
   pendingAction.value = null
 }
 
-useEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.code === 'KeyS' && (event.ctrlKey || event.metaKey)) {
-    void save()
-    event.preventDefault()
-  }
-})
-
-useEventListener(window, 'beforeunload', (event: BeforeUnloadEvent) => {
-  if (!dirty.value)
-    return
-  event.preventDefault()
-  event.returnValue = ''
-})
-
 const contentRef = computed({
   get: () => content.value,
   set: (value: string) => {
@@ -179,8 +175,25 @@ function switchTab(nextTab: EditorTab) {
   document.activeElement?.blur?.()
 }
 
-if (props.resize) {
-  useEventListener('pointermove', (event: PointerEvent) => {
+onMounted(() => {
+  listen(window, 'keydown', (event) => {
+    if (event.code === 'KeyS' && (event.ctrlKey || event.metaKey)) {
+      void save()
+      event.preventDefault()
+    }
+  })
+
+  listen(window, 'beforeunload', (event) => {
+    if (!dirty.value)
+      return
+    event.preventDefault()
+    event.returnValue = ''
+  })
+
+  if (!props.resize)
+    return
+
+  listen(window, 'pointermove', (event) => {
     if (!handlerDown.value)
       return
 
@@ -188,13 +201,20 @@ if (props.resize) {
       ? window.innerHeight - event.pageY
       : window.innerWidth - event.pageX)
   }, { passive: true })
-  useEventListener('pointerup', () => {
+
+  listen(window, 'pointerup', () => {
     handlerDown.value = false
   })
-  useEventListener('resize', () => {
+
+  listen(window, 'resize', () => {
     updateSize()
   })
-}
+})
+
+onBeforeUnmount(() => {
+  for (const dispose of disposers.splice(0))
+    dispose()
+})
 </script>
 
 <template>
