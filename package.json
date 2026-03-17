@@ -13,6 +13,11 @@
     "build": "turbo run build --filter=./apps/slidev-hub",
     "check": "turbo run check --continue --filter=./apps/slidev-hub"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "devDependencies": {
     "turbo": "^2.1.3"
   }

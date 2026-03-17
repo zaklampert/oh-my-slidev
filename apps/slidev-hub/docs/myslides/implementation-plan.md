@@ -10,8 +10,8 @@ This document is intentionally execution-oriented.
 
 Current implementation lives mostly in:
 
-- `slidev-hub/server/*`
-- `slidev-hub/src/App.vue`
+- `apps/slidev-hub/server/*`
+- `apps/slidev-hub/src/App.vue`
 
 The current server stack still combines too many responsibilities:
 
@@ -55,20 +55,23 @@ Long-term target:
 
 ```text
 oh-my-slidev/
-  slidev/
-  slidev-hub/
-  slidev-agent/
+  apps/
+    slidev-hub/
   packages/
     shared-types/
     shared-client/
+    slidev-hub-editor-addon/
+    slidev-agent-runtime/
+    slidev-agent-shared-types/
     deck-runtime-sdk/
     slidev-addon-agent/
-    slidev-addon-hub-bridge/
+  vendor/
+    slidev/
 ```
 
 ## Proposed Responsibilities
 
-### `slidev-hub`
+### `apps/slidev-hub`
 
 Owns:
 
@@ -84,9 +87,9 @@ Consumes:
 
 - `shared-client`
 - `shared-types`
-- `slidev-agent` APIs later
+- `slidev-agent-runtime` later
 
-### Runtime manager concern inside `slidev-hub`
+### Runtime manager concern inside `apps/slidev-hub`
 
 Owns:
 
@@ -102,21 +105,16 @@ Consumes:
 - `deck-runtime-sdk`
 - `shared-types`
 
-This may later split out of `slidev-hub` if runtime orchestration needs its own deployable boundary.
+This may later split out of `apps/slidev-hub` if runtime orchestration needs its own deployable boundary.
 
-### `slidev-agent`
+### `packages/slidev-agent-runtime`
 
 Owns:
 
-- `AgentTask` lifecycle
-- agent session execution
+- embedded `AgentTask` execution
 - deck-scoped permissions
 - task logs
 - diffs and apply/revert flow
-
-Consumes:
-
-- `shared-types`
 
 ### `packages/shared-types`
 
@@ -164,14 +162,6 @@ It should not own:
 - agent execution
 - heavy orchestration logic
 - deck registry logic
-
-### `packages/slidev-addon-hub-bridge`
-
-Owns:
-
-- deck identity discovery inside Slidev
-- auth/session bridging to hub APIs
-- lightweight deck-aware client glue
 
 ## Initial API Surface
 

@@ -48,7 +48,7 @@ The Hub backend exposes agent endpoints under `/api/agent/*`.
 - `slidev-hub` launches real per-deck Slidev runtimes and proxies them under slug routes such as `/<slug>/`, `/<slug>/presenter/`, and `/<slug>/overview/`.
 - Each active runtime now boots from a generated wrapper workspace under `.slidev-hub/runtime/<slug>/` so the hub can inject its own editor addon without mutating the source deck.
 - The wrapper `slides.md` preserves the source deck headmatter, forces `editor: true`, and points back at the original deck via `src:`.
-- The wrapper `package.json` injects `slidev-hub/packages/slidev-hub-editor-addon` plus any original package-level Slidev addons.
+- The wrapper `package.json` injects `oh-my-slidev/packages/slidev-hub-editor-addon` plus any original package-level Slidev addons.
 - Presenter/viewer sync depends on Slidev's Vite and `vite-plugin-vue-server-ref` transport, so the gateway must preserve both HTTP and websocket semantics.
 - Root control-channel requests like `/@server-reactive/nav` are deck-specific and are routed by `Referer`.
 - Root `@slidev/*` requests are also deck-specific and must be resolved by `Referer`, then forwarded under the active deck base path.
@@ -58,7 +58,7 @@ The Hub backend exposes agent endpoints under `/api/agent/*`.
 
 ## In-Deck Editor
 
-- The built-in autosaving Slidev `SideEditor` is replaced by the addon package `packages/slidev-hub-editor-addon`.
+- The built-in autosaving Slidev `SideEditor` is replaced by the workspace addon package `packages/slidev-hub-editor-addon`.
 - The custom editor renders in the same `play` and `presenter` mount points Slidev already uses.
 - Saving is manual only:
   - `Cmd/Ctrl+S`
@@ -79,7 +79,7 @@ pnpm start
 Recommended Railway setup:
 
 1. Create a Railway service from this repo.
-2. Let Railway build from the included [Dockerfile](/Users/zaklampert/projects/oh-my-slidev/slidev-hub/Dockerfile).
+2. Let Railway build from the included `apps/slidev-hub/Dockerfile`.
 2. Attach a persistent volume and mount it at `/data`.
 3. Set these environment variables:
 

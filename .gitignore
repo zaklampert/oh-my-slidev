@@ -2,6 +2,8 @@
 node_modules/
 dist/
 .turbo/
+.slidev-hub/
+hub-projects/
 .sources/
 apps/slidev-hub/.slidev-hub/
 apps/slidev-hub/.legacy/

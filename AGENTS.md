@@ -2,28 +2,29 @@
 
 This workspace currently contains:
 
-- `slidev/`: upstream Slidev repo with a few temporary local compatibility patches
-- `slidev-hub/`: active standalone app for the extracted hub
-- `slidev-agent/`: reserved for future agent-specific work
+- `apps/slidev-hub/`: active hub application
+- `packages/`: shared workspace packages, including the in-deck editor addon and agent runtime packages
+- `vendor/slidev/`: upstream Slidev checkout managed as a git submodule
+- `.sources/`: migration sources retained temporarily while the monorepo settles
 
 ## Read This First
 
 If you are working on the MySlides platform direction, start with:
 
-1. `slidev-hub/docs/myslides/architecture.md`
-2. `slidev-hub/docs/myslides/roadmap.md`
-3. `slidev-hub/docs/myslides/implementation-plan.md`
-4. `slidev-hub/docs/myslides/extraction-checklist.md`
+1. `apps/slidev-hub/docs/myslides/architecture.md`
+2. `apps/slidev-hub/docs/myslides/roadmap.md`
+3. `apps/slidev-hub/docs/myslides/implementation-plan.md`
+4. `apps/slidev-hub/docs/myslides/extraction-checklist.md`
 
 ## Current Reality
 
-- `slidev-hub/` is the active working hub app and should be treated as the current implementation.
-- `slidev/packages/hub` is no longer the center of gravity and should not receive new product work.
+- `apps/slidev-hub/` is the active working hub app and should be treated as the current implementation.
+- `vendor/slidev/packages/hub` is no longer the center of gravity and should not receive new product work.
 - The long-term architecture is a platform around Slidev, not a permanent fork inside Slidev.
 - Presenter/viewer sync works through the hub only because the gateway preserves Slidev's Vite/server-ref transport semantics; do not simplify those rules casually.
-- `slidev-hub` now runs independently of sibling Slidev source internals by launching the published `@slidev/cli` package as a child process.
-- `slidev-hub` has a working Railway deployment path using the repo `Dockerfile` plus a mounted `/data` volume.
-- `slidev-hub` now injects its custom in-deck editor through the addon package `slidev-hub/packages/slidev-hub-editor-addon`.
+- `apps/slidev-hub` now runs independently of Slidev source internals by launching the published `@slidev/cli` package as a child process.
+- `apps/slidev-hub` has a working Railway deployment path using `apps/slidev-hub/Dockerfile` plus a mounted `/data` volume.
+- `slidev-hub` now injects its custom in-deck editor through the workspace addon package `packages/slidev-hub-editor-addon`.
 - Active deck runtimes no longer launch the source deck entry directly; `slidev-hub` generates a wrapper workspace under `.slidev-hub/runtime/<slug>/` and launches Slidev from that wrapper entry.
 
 ## Known Findings
@@ -58,9 +59,9 @@ MySlides is intended to become a higher-order platform with:
 Prefer this split:
 
 - Slidev stays external and close to upstream
-- `slidev-hub` lives outside Slidev and owns hub/control-plane concerns
-- runtime manager lives outside Slidev
-- `slidev-agent` lives outside Slidev
+- `apps/slidev-hub` owns hub/control-plane concerns
+- runtime manager logic should live outside `vendor/slidev`
+- agent packages should live under `packages/` unless or until they earn their own app boundary
 - Slidev addon packages live outside Slidev and integrate through extension points
 
 Only patch Slidev internals when there is no viable extension seam, and treat such patches as temporary.

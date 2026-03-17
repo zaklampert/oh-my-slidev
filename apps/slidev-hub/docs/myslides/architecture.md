@@ -120,29 +120,32 @@ Long-term target structure:
 
 ```text
 oh-my-slidev/
-  slidev/
-  slidev-hub/
-  slidev-agent/
+  apps/
+    slidev-hub/
   packages/
-    slidev-addon-agent/
-    slidev-addon-hub-bridge/
     shared-types/
     shared-client/
+    slidev-hub-editor-addon/
+    slidev-agent-runtime/
+    slidev-agent-shared-types/
+    slidev-addon-agent/
     deck-runtime-sdk/
+  vendor/
+    slidev/
 ```
 
 What lives where:
 
-- `slidev-hub`: operator UI plus control-plane and runtime orchestration concerns
-- `slidev-agent`: deck-scoped agents and tasks
+- `apps/slidev-hub`: operator UI plus control-plane and runtime orchestration concerns
+- `packages/slidev-agent-runtime`: deck-scoped agent execution
 - `slidev-addon-agent`: in-deck UI
-- `slidev-addon-hub-bridge`: integration glue between Slidev and hub APIs
+- `vendor/slidev`: upstream integration target
 
 ## Current Prototype Status
 
 Current working implementation lives in:
 
-- `slidev-hub/`
+- `apps/slidev-hub/`
 
 What it currently proves:
 
@@ -179,7 +182,7 @@ What it does not represent:
 
 Current production note:
 
-- `slidev-hub` is now proven on Railway with a Docker-based deploy, `/data` volume persistence, and a public base URL
+- `apps/slidev-hub` is now proven on Railway with a Docker-based deploy, `/data` volume persistence, and a public base URL
 - the remaining production complexity lives mostly in the gateway rules for Vite/Slidev virtual modules, not in process orchestration
 
 Treat it as a proving ground, not the final architecture.
@@ -190,7 +193,7 @@ Preferred strategy:
 
 - keep Slidev near-upstream
 - integrate through addons and extension seams
-- move product-specific systems outside Slidev
+- keep product-specific systems in `apps/` and `packages/`, outside `vendor/slidev`
 
 Only make Slidev-core changes when:
 

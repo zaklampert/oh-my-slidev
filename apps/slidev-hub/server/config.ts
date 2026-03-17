@@ -25,7 +25,7 @@ const railwayVolumeRoot = process.env.RAILWAY_VOLUME_MOUNT_PATH
     : null
 
 export const packageRoot = resolve(__dirname, isProduction ? '../..' : '..')
-export const workspaceRoot = packageRoot
+export const workspaceRoot = resolve(packageRoot, '../..')
 export const dataRoot = resolveEnvPath(
   process.env.SLIDEV_HUB_DATA_ROOT,
   railwayVolumeRoot ? resolve(railwayVolumeRoot, 'slidev-hub') : resolve(workspaceRoot, '.slidev-hub'),
@@ -43,10 +43,9 @@ export const managedProjectsRoot = resolveEnvPath(
 )
 export const hubPort = Number(process.env.PORT || 4310)
 export const publicBaseUrl = normalizePublicBaseUrl(process.env.SLIDEV_HUB_PUBLIC_BASE_URL)
-export const slidevAgentRoot = resolve(packageRoot, '../slidev-agent')
-export const slidevHubEditorAddonRoot = resolve(packageRoot, 'packages/slidev-hub-editor-addon')
+export const slidevHubEditorAddonRoot = resolve(workspaceRoot, 'packages/slidev-hub-editor-addon')
 export const slidevAgentSkillsRoot = resolve(
-  process.env.SLIDEV_AGENT_SKILLS_ROOT || resolve(slidevAgentRoot, 'skills'),
+  process.env.SLIDEV_AGENT_SKILLS_ROOT || resolve(workspaceRoot, 'packages/slidev-agent-runtime/skills'),
 )
 
 export function timestamp() {
