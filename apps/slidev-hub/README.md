@@ -1,17 +1,20 @@
 # slidev-hub
 
-`slidev-hub` is the independent extraction target for the Slidev hub prototype.
+`slidev-hub` is the current hub application inside the `oh-my-slidev` monorepo.
 
-## Current status
+It manages Slidev decks from one UI while launching real Slidev runtimes for active presentations.
 
-- runs as a standalone app outside the Slidev monorepo
-- owns its own data under `.slidev-hub/`
-- owns its own managed decks under `hub-projects/`
+For the monorepo overview, start at [README.md](/Users/zaklampert/projects/oh-my-slidev/README.md).
+
+## What It Does
+
 - launches the published `@slidev/cli` package for active deck runtimes
-- is the primary working hub implementation in this workspace
-- currently defaults to `http://localhost:4310`
+- proxies decks under slug routes like `/<slug>/`, `/<slug>/presenter/`, and `/<slug>/overview/`
+- injects a custom manual-save in-deck editor through `packages/slidev-hub-editor-addon`
+- stores hub state, logs, runtime workspaces, and managed decks under the monorepo defaults (`.slidev-hub/` and `hub-projects/`) locally, or under `/data/slidev-hub` in Railway-style deployments
+- defaults to `http://localhost:4310`
 
-## Current commands
+## Commands
 
 ```bash
 pnpm install
@@ -22,9 +25,17 @@ pnpm start
 
 If `4310` is already in use, stop the existing hub process first or override `PORT`.
 
-## Agent runtime
+From the monorepo root, the equivalent commands are:
 
-`slidev-hub` now hosts the reusable Slidev agent runtime in-process via the local `slidev-agent` package.
+```bash
+pnpm run dev:hub
+pnpm run build:hub
+pnpm run start:hub
+```
+
+## Agent Runtime
+
+`slidev-hub` hosts the reusable Slidev agent runtime in-process via the workspace agent packages.
 
 Local agent testing uses environment variables loaded from `.env`:
 
@@ -43,7 +54,7 @@ pnpm run dev
 
 The Hub backend exposes agent endpoints under `/api/agent/*`.
 
-## Runtime model
+## Runtime Model
 
 - `slidev-hub` launches real per-deck Slidev runtimes and proxies them under slug routes such as `/<slug>/`, `/<slug>/presenter/`, and `/<slug>/overview/`.
 - Each active runtime now boots from a generated wrapper workspace under `.slidev-hub/runtime/<slug>/` so the hub can inject its own editor addon without mutating the source deck.
@@ -69,7 +80,11 @@ The Hub backend exposes agent endpoints under `/api/agent/*`.
 
 ## Railway
 
-`slidev-hub` now has a valid production path:
+The monorepo root is the Railway deploy source. Railway should build with:
+
+- `apps/slidev-hub/Dockerfile`
+
+`slidev-hub` has a valid production path:
 
 ```bash
 pnpm run build
@@ -80,7 +95,7 @@ Recommended Railway setup:
 
 1. Create a Railway service from this repo.
 2. Let Railway build from the included `apps/slidev-hub/Dockerfile`.
-2. Attach a persistent volume and mount it at `/data`.
+3. Attach a persistent volume and mount it at `/data`.
 3. Set these environment variables:
 
 ```bash

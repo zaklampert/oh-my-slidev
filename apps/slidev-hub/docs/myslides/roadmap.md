@@ -8,26 +8,22 @@ The immediate priority is not more feature sprawl inside the prototype hub. The 
 
 ## Current State
 
-Prototype implementation:
+Current implementation:
 
-- `slidev/packages/hub`
+- `apps/slidev-hub`
 
-Prototype strengths:
+Current strengths:
 
 - proves hub UI can manage decks
 - proves persistent logs are useful
 - proves slug-based routing is viable
 - proves a real Slidev runtime can sit behind the hub
 
-Prototype weakness:
+Current weaknesses:
 
-- lives inside the Slidev repo
-- currently tightly coupled to local Slidev internals
-- not yet shaped for multiple active decks and deck-scoped agents
-
-Extraction target:
-
-- move the working prototype from `slidev/packages/hub` into sibling app `slidev-hub/`
+- runtime and agent concerns still live inside one app boundary
+- several planning docs still reflect the earlier pre-monorepo extraction path
+- deck and agent API contracts are still transitional
 
 ## Phase 1: Stabilize The Platform Boundary
 
@@ -41,7 +37,7 @@ Deliverables:
 
 - architecture docs
 - roadmap docs
-- clear statement that `packages/hub` is a spike
+- clear statement that `vendor/slidev/packages/hub` is a spike
 - identify what can be extracted cleanly first
 
 ## Phase 2: Multiple Active Deck Runtimes
@@ -148,7 +144,7 @@ Deliverables:
 
 ## Near-Term Next Steps
 
-- keep improving the current prototype only where it validates the target architecture
+- keep improving the current implementation only where it validates the target architecture
 - refactor toward multiple active deck runtimes
 - define the first stable API contracts for deck registry, runtime state, and agent tasks
-- begin planning extraction of hub concerns out of `slidev/packages/hub`
+- begin extracting reusable runtime and agent concerns out of `apps/slidev-hub`

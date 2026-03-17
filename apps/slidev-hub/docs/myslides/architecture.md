@@ -203,7 +203,7 @@ Only make Slidev-core changes when:
 
 Current temporary exception:
 
-- local experimentation may still keep unrelated compatibility patches in the sibling `slidev/` checkout
+- local experimentation may still keep unrelated compatibility patches in `vendor/slidev`
 - `slidev-hub` itself should avoid depending on them
 
 ## Enterprise Direction

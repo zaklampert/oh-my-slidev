@@ -6,7 +6,7 @@ Provide a compact checklist for moving from the current prototype to the intende
 
 ## Rules
 
-- treat `slidev/packages/hub` as a spike
+- treat `vendor/slidev/packages/hub` as a spike
 - avoid adding new irreversible dependencies on Slidev source internals
 - extract vocabulary and contracts before extracting processes
 - prefer small clear boundaries over one large rewrite
@@ -71,14 +71,14 @@ Provide a compact checklist for moving from the current prototype to the intende
 
 ### Extraction Work
 
-- [ ] create `shared-types`
-- [ ] create `shared-client`
-- [ ] create `deck-runtime-sdk`
-- [x] create sibling `slidev-hub/` app
-- [x] extract control plane into `slidev-hub`
-- [ ] extract runtime control into the runtime manager concern inside `slidev-hub`
-- [ ] introduce `slidev-agent`
-- [ ] build external `slidev-addon-agent`
+- [x] create `shared-types`
+- [x] create `shared-client`
+- [x] create placeholder `deck-runtime-sdk`
+- [x] move the hub app into `apps/slidev-hub`
+- [x] extract control plane into `apps/slidev-hub`
+- [ ] extract runtime control into the runtime manager concern inside `apps/slidev-hub`
+- [x] introduce workspace agent packages
+- [ ] build production-ready `slidev-addon-agent`
 
 ### Transitional Cleanup
 
@@ -88,11 +88,11 @@ Provide a compact checklist for moving from the current prototype to the intende
 
 ## Current Highest-Leverage Next Steps
 
-- [ ] keep the current prototype working
+- [x] keep the current implementation working
 - [x] modularize the hub server
 - [x] prove multiple active deck runtimes
 - [ ] define the first stable deck/runtime/agent contracts
-- [ ] reduce runtime coupling between `slidev-hub` and local `slidev`
+- [ ] reduce runtime coupling between `apps/slidev-hub` and `vendor/slidev`
 
 ## Done Means
 

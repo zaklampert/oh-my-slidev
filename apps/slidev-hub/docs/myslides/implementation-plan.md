@@ -23,7 +23,7 @@ The current server stack still combines too many responsibilities:
 - API surface
 - development server bootstrapping
 
-That is acceptable for a transitional sibling app, but not for the target platform.
+That is acceptable for the current app-centric phase, but not for the target platform.
 
 ## Findings From The Current Working Build
 
@@ -249,7 +249,7 @@ type AgentTask = {
 
 ### Step 1: Extract shared types
 
-Move type definitions out of `packages/hub` first.
+Move type definitions out of hub-local code first.
 
 Reason:
 
@@ -273,7 +273,7 @@ Reason:
 
 Status:
 
-- done in `slidev-hub/server/*`
+- done in `apps/slidev-hub/server/*`
 
 ### Step 3: Reintroduce multiple active runtimes
 
@@ -311,7 +311,7 @@ Reason:
 
 ## Current Prototype To Future Package Mapping
 
-Current concern in `packages/hub/server/index.ts` to future home:
+Current concern in `apps/slidev-hub/server/index.ts` to future home:
 
 - `createManagedProject`, `importExistingProject`, `findProject`
   - future `slidev-hub`
@@ -326,7 +326,7 @@ Current concern in `packages/hub/server/index.ts` to future home:
 
 ## Short-Term Implementation Rule
 
-Until extraction begins, changes to `packages/hub` should be judged by one question:
+Until further extraction begins, changes to `apps/slidev-hub` should be judged by one question:
 
 Does this validate the target platform architecture, or does it deepen accidental coupling to the prototype?
 
