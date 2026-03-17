@@ -12,6 +12,21 @@ function sendJson(response: ServerResponse, status: number, payload: unknown) {
   response.end(JSON.stringify(payload))
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;')
+}
+
+function sendHtml(response: ServerResponse, status: number, html: string) {
+  response.statusCode = status
+  response.setHeader('Content-Type', 'text/html; charset=utf-8')
+  response.end(html)
+}
+
 function readBody(request: IncomingMessage) {
   return new Promise<string>((resolveBody, rejectBody) => {
     const parts: Uint8Array[] = []
@@ -46,6 +61,27 @@ export function createApiMiddleware(
     const { pathname } = url
     const externalBaseUrl = getExternalBaseUrl(request)
     logHub(`${request.method || 'GET'} ${pathname}`)
+
+    if (request.method === 'GET' && pathname === '/api/auth/check') {
+      sendJson(response, 200, { ok: true })
+      return true
+    }
+
+    if (request.method === 'GET' && pathname === '/api/auth/prompt') {
+      const returnTo = url.searchParams.get('returnTo') || '/'
+      sendHtml(response, 200, `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0;url=${escapeHtml(returnTo)}">
+    <title>slidev-hub auth</title>
+  </head>
+  <body>
+    <script>window.location.replace(${JSON.stringify(returnTo)})</script>
+  </body>
+</html>`)
+      return true
+    }
 
     if (request.method === 'GET' && pathname === '/api/projects') {
       sendJson(response, 200, {

@@ -18,6 +18,7 @@ const hubLogPath = ref('')
 const logView = ref<'project' | 'hub'>('project')
 
 let pollHandle: number | undefined
+let authPromptTriggered = false
 
 const selectedProject = computed(() => projects.value.find(project => project.id === selectedId.value) ?? projects.value[0] ?? null)
 const runningProjects = computed(() => projects.value.filter(project => project.isActive && project.runtime.status === 'running').length)
@@ -30,6 +31,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   })
+
+  if (response.status === 401) {
+    if (!authPromptTriggered) {
+      authPromptTriggered = true
+      const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`
+      window.location.assign(`/api/auth/prompt?returnTo=${encodeURIComponent(returnTo)}`)
+    }
+    throw new Error('Authentication required')
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({ error: `Request failed with ${response.status}` }))

@@ -11,6 +11,7 @@ import sirv from 'sirv'
 import { createServer as createViteServer } from 'vite'
 import { createHubAgentController } from './agent.js'
 import { createApiMiddleware } from './api.js'
+import { createApiAuthMiddleware } from './auth.js'
 import { ensureDataLayout, hubPort, logsRoot, managedProjectsRoot, packageRoot, statePath } from './config.js'
 import { logHub } from './logs.js'
 import { createProxyHandlers } from './proxy.js'
@@ -62,6 +63,7 @@ function getListenHost() {
 
 async function createProductionServer() {
   const app = connect()
+  app.use(createApiAuthMiddleware())
   app.use(createApiMiddleware(registry, runtime, agent))
   app.use(proxy.proxyHttpRequest)
   app.use(sirv(`${packageRoot}/dist/client`, { dev: false, single: true }))
@@ -95,6 +97,7 @@ async function createDevelopmentServer() {
   })
 
   hubViteServer = vite
+  app.use(createApiAuthMiddleware())
   app.use(createApiMiddleware(registry, runtime, agent))
   app.use(proxy.proxyHttpRequest)
   app.use(vite.middlewares)

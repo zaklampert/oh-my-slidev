@@ -43,6 +43,9 @@ export const managedProjectsRoot = resolveEnvPath(
 )
 export const hubPort = Number(process.env.PORT || 4310)
 export const publicBaseUrl = normalizePublicBaseUrl(process.env.SLIDEV_HUB_PUBLIC_BASE_URL)
+export const basicAuthUsername = process.env.SLIDEV_HUB_BASIC_AUTH_USERNAME?.trim() || ''
+export const basicAuthPassword = process.env.SLIDEV_HUB_BASIC_AUTH_PASSWORD?.trim() || ''
+export const basicAuthEnabled = basicAuthUsername.length > 0 && basicAuthPassword.length > 0
 export const slidevHubEditorAddonRoot = resolve(workspaceRoot, 'packages/slidev-hub-editor-addon')
 export const slidevAgentSkillsRoot = resolve(
   process.env.SLIDEV_AGENT_SKILLS_ROOT || resolve(workspaceRoot, 'packages/slidev-agent-runtime/skills'),
