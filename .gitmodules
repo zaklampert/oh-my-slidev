@@ -1,3 +1,4 @@
 [submodule "vendor/slidev"]
 	path = vendor/slidev
 	url = git@github.com:slidevjs/slidev.git
+	ignore = dirty
