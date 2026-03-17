@@ -147,9 +147,17 @@ export function createProxyHandlers(runtime: RuntimeController) {
       return null
 
     const runtimePrefix = `/${targetRuntime.project.slug}`
-    const targetPath = (isServerRefWrite(pathname, runtimePrefix, method) || isSlidevVirtualModule(pathname, runtimePrefix))
-      ? pathname.slice(runtimePrefix.length) || '/'
-      : pathname
+    let targetPath = pathname
+
+    if (isServerRefWrite(pathname, runtimePrefix, method)) {
+      targetPath = pathname.slice(runtimePrefix.length) || '/'
+    }
+    else if (isRootSlidevVirtualModule(pathname)) {
+      targetPath = `${runtimePrefix}${pathname}`
+    }
+    else if (isSlidevVirtualModule(pathname, runtimePrefix)) {
+      targetPath = pathname
+    }
 
     return {
       runtime: targetRuntime,
