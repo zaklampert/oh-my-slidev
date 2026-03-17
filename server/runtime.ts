@@ -13,6 +13,16 @@ const require = createRequire(import.meta.url)
 const slidevCliPath = require.resolve('@slidev/cli/bin/slidev.mjs')
 const STARTUP_TIMEOUT_MS = 20_000
 const HEALTHCHECK_INTERVAL_MS = 250
+const publicBaseHost = publicBaseUrl
+  ? (() => {
+      try {
+        return new URL(publicBaseUrl).hostname
+      }
+      catch {
+        return undefined
+      }
+    })()
+  : undefined
 
 function appendRuntimeLog(runtime: ActiveRuntime, message: string) {
   runtime.logTail.push(message)
@@ -180,6 +190,7 @@ export function createRuntimeController(
         env: {
           ...process.env,
           FORCE_COLOR: '0',
+          ...(publicBaseHost ? { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: publicBaseHost } : {}),
         },
         // The published Slidev CLI binds keyboard shortcuts on stdin and exits
         // immediately if it is spawned without a live input stream.
