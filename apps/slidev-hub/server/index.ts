@@ -53,6 +53,13 @@ function isProduction() {
   return process.env.NODE_ENV === 'production'
 }
 
+function getListenHost() {
+  if (process.env.HOST?.trim())
+    return process.env.HOST.trim()
+
+  return isProduction() ? '0.0.0.0' : undefined
+}
+
 async function createProductionServer() {
   const app = connect()
   app.use(createApiMiddleware(registry, runtime, agent))
@@ -141,8 +148,10 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   })
 }
 
-server.listen(hubPort, () => {
-  const origin = `http://localhost:${hubPort}`
+const listenHost = getListenHost()
+
+server.listen(hubPort, listenHost, () => {
+  const origin = `http://${listenHost || 'localhost'}:${hubPort}`
   logHub(`${isProduction() ? 'production' : 'development'} server listening on ${origin}`)
   console.log(`Slidev Hub listening on ${origin}`)
   console.log(`State: ${statePath}`)
