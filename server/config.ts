@@ -7,16 +7,27 @@ import { fileURLToPath } from 'node:url'
 const isProduction = process.env.NODE_ENV === 'production'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const resolveEnvPath = (value: string | undefined, fallback: string) => value ? resolve(value) : fallback
+const railwayVolumeRoot = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? resolve(process.env.RAILWAY_VOLUME_MOUNT_PATH)
+  : existsSync('/data')
+    ? '/data'
+    : null
 
 export const packageRoot = resolve(__dirname, isProduction ? '../..' : '..')
 export const workspaceRoot = packageRoot
-export const dataRoot = resolveEnvPath(process.env.SLIDEV_HUB_DATA_ROOT, resolve(workspaceRoot, '.slidev-hub'))
+export const dataRoot = resolveEnvPath(
+  process.env.SLIDEV_HUB_DATA_ROOT,
+  railwayVolumeRoot ? resolve(railwayVolumeRoot, 'slidev-hub') : resolve(workspaceRoot, '.slidev-hub'),
+)
 export const registryPath = resolve(dataRoot, 'projects.json')
 export const statePath = resolve(dataRoot, 'state.json')
 export const logsRoot = resolve(dataRoot, 'logs')
 export const projectsLogsRoot = resolve(logsRoot, 'projects')
 export const hubLogPath = resolve(logsRoot, 'hub.log')
-export const managedProjectsRoot = resolveEnvPath(process.env.SLIDEV_HUB_PROJECTS_ROOT, resolve(workspaceRoot, 'hub-projects'))
+export const managedProjectsRoot = resolveEnvPath(
+  process.env.SLIDEV_HUB_PROJECTS_ROOT,
+  railwayVolumeRoot ? resolve(dataRoot, 'projects') : resolve(workspaceRoot, 'hub-projects'),
+)
 export const hubPort = Number(process.env.PORT || 4310)
 
 export function timestamp() {

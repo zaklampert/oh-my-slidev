@@ -41,31 +41,31 @@ pnpm start
 Recommended Railway setup:
 
 1. Create a Railway service from this repo.
+2. Let Railway build from the included [Dockerfile](/Users/zaklampert/projects/oh-my-slidev/slidev-hub/Dockerfile).
 2. Attach a persistent volume and mount it at `/data`.
 3. Set these environment variables:
 
 ```bash
 PORT=4310
 NODE_ENV=production
+```
+
+4. Optional explicit overrides if you do not want the defaults:
+
+```bash
 SLIDEV_HUB_DATA_ROOT=/data/slidev-hub
 SLIDEV_HUB_PROJECTS_ROOT=/data/slidev-hub/projects
 ```
 
-4. Use the provided [`railway.json`](/Users/zaklampert/projects/oh-my-slidev/slidev-hub/railway.json) or equivalent commands:
-
-```bash
-corepack enable
-pnpm install --frozen-lockfile
-pnpm run build
-pnpm start
-```
-
 Notes:
 
+- if `/data` exists, `slidev-hub` now defaults to:
+  - data root: `/data/slidev-hub`
+  - managed decks: `/data/slidev-hub/projects`
 - first boot on Railway will have an empty deck registry
-- decks, registry state, and logs should live on the persistent volume
+- decks, registry state, and logs should live on the persistent volume, not `/app`
 - presenter sync requires live Slidev runtimes; this is not a static-export deployment model
-- the Railway build explicitly reinstalls dependencies with pnpm so Linux native optional packages such as `@oxc-parser/binding-linux-x64-gnu` are present for Slidev runtimes
+- the Docker image installs dependencies inside Linux, which avoids the missing native `oxc-parser` binding problem seen in builder-managed installs
 
 ## Known Quirks
 
