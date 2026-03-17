@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Connect } from 'vite'
+import type { HubAgentController, SendMessageInput } from './agent.js'
 import { publicBaseUrl } from './config.js'
 import { getProjectLogPath, hubLogPath, logHub, readLogTail } from './logs.js'
 import type { RegistryController } from './registry.js'
@@ -35,6 +36,7 @@ function getExternalBaseUrl(request: IncomingMessage) {
 export function createApiMiddleware(
   registry: RegistryController,
   runtime: RuntimeController,
+  agent: HubAgentController,
 ): Connect.NextHandleFunction {
   const getActiveProjectIds = () => runtime.listActiveProjectIds()
   const getActiveProjectId = () => getActiveProjectIds()[0] ?? null
@@ -75,6 +77,58 @@ export function createApiMiddleware(
       if (!body.path?.trim())
         throw new Error('Project path is required')
       sendJson(response, 200, { project: await registry.importExistingProject(body.path.trim(), externalBaseUrl) })
+      return true
+    }
+
+    if (request.method === 'POST' && pathname === '/api/agent/projects/attach') {
+      const body = JSON.parse(await readBody(request) || '{}') as { projectId?: string }
+      if (!body.projectId?.trim())
+        throw new Error('Project ID is required')
+      sendJson(response, 200, { project: await agent.attachProject(body.projectId.trim()) })
+      return true
+    }
+
+    const agentProjectMatch = pathname.match(/^\/api\/agent\/projects\/([^/]+)$/)
+    if (request.method === 'GET' && agentProjectMatch) {
+      sendJson(response, 200, { project: await agent.getProject(agentProjectMatch[1]) })
+      return true
+    }
+
+    const agentThreadMatch = pathname.match(/^\/api\/agent\/projects\/([^/]+)\/thread$/)
+    if (request.method === 'GET' && agentThreadMatch) {
+      sendJson(response, 200, { thread: await agent.getThread(agentThreadMatch[1]) })
+      return true
+    }
+
+    const agentChangesMatch = pathname.match(/^\/api\/agent\/projects\/([^/]+)\/changes$/)
+    if (request.method === 'GET' && agentChangesMatch) {
+      sendJson(response, 200, { changes: await agent.listChanges(agentChangesMatch[1]) })
+      return true
+    }
+
+    const agentStatusMatch = pathname.match(/^\/api\/agent\/projects\/([^/]+)\/status$/)
+    if (request.method === 'GET' && agentStatusMatch) {
+      sendJson(response, 200, { status: await agent.getStatus(agentStatusMatch[1]) })
+      return true
+    }
+
+    const agentMessageMatch = pathname.match(/^\/api\/agent\/projects\/([^/]+)\/messages$/)
+    if (request.method === 'POST' && agentMessageMatch) {
+      const body = JSON.parse(await readBody(request) || '{}') as SendMessageInput
+      if (!body.text?.trim())
+        throw new Error('Message text is required')
+      sendJson(response, 200, {
+        thread: await agent.sendMessage(agentMessageMatch[1], {
+          ...body,
+          text: body.text.trim(),
+        }),
+      })
+      return true
+    }
+
+    const agentEventsMatch = pathname.match(/^\/api\/agent\/projects\/([^/]+)\/events$/)
+    if (request.method === 'GET' && agentEventsMatch) {
+      agent.stream(agentEventsMatch[1], response)
       return true
     }
 
