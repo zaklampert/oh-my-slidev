@@ -40,8 +40,14 @@ function isNavWrite(targetPath: string, method: string) {
 }
 
 export function createProxyHandlers(runtime: RuntimeController) {
+  function getExternalHost(request: IncomingMessage, targetPort: number) {
+    return request.headers['x-forwarded-host']?.toString().split(',')[0]?.trim()
+      || request.headers.host
+      || `localhost:${targetPort}`
+  }
+
   function getForwardedHeaders(request: IncomingMessage, targetPort: number) {
-    const host = request.headers.host || `localhost:${targetPort}`
+    const host = getExternalHost(request, targetPort)
     const forwardedHost = request.headers['x-forwarded-host']?.toString().split(',')[0]?.trim() || host
     const forwardedProto = request.headers['x-forwarded-proto']?.toString().split(',')[0]?.trim() || 'http'
 
@@ -52,6 +58,20 @@ export function createProxyHandlers(runtime: RuntimeController) {
       'x-forwarded-proto': forwardedProto,
       'x-forwarded-port': request.headers['x-forwarded-port']?.toString().split(',')[0]?.trim() || '',
     }
+  }
+
+  function shouldRewriteViteClient(targetPath: string, method: string) {
+    return method === 'GET' && (targetPath === '/@vite/client' || targetPath.endsWith('/@vite/client'))
+  }
+
+  function rewriteViteClient(body: Buffer, request: IncomingMessage, targetPort: number, runtimeBase: string) {
+    const externalHost = getExternalHost(request, targetPort)
+    const hostWithBase = `${externalHost}${runtimeBase}`
+    const rewritten = body.toString('utf8')
+      .replace(/const serverHost = ".*?";/, `const serverHost = "${hostWithBase}";`)
+      .replace(/const directSocketHost = ".*?";/, `const directSocketHost = "${hostWithBase}";`)
+
+    return Buffer.from(rewritten)
   }
 
   async function readRequestBody(request: IncomingMessage) {
@@ -157,6 +177,20 @@ export function createProxyHandlers(runtime: RuntimeController) {
           },
         },
         (proxyRes) => {
+          if (shouldRewriteViteClient(target.path, method)) {
+            const chunks: Buffer[] = []
+            proxyRes.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
+            proxyRes.on('end', () => {
+              const rewrittenBody = rewriteViteClient(Buffer.concat(chunks), request, targetPort, target.runtime.base)
+              response.writeHead(proxyRes.statusCode || 500, {
+                ...proxyRes.headers,
+                'content-length': String(rewrittenBody.length),
+              })
+              response.end(rewrittenBody)
+            })
+            return
+          }
+
           response.writeHead(proxyRes.statusCode || 500, proxyRes.headers)
           proxyRes.pipe(response)
         },
