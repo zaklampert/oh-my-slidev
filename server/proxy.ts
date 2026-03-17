@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { request as httpRequest } from 'node:http'
-import { logHub } from './logs'
-import type { RuntimeController } from './runtime'
+import { logHub } from './logs.js'
+import type { RuntimeController } from './runtime.js'
 
 const DEFAULT_TIMER_STATE = {
   status: 'stopped',
@@ -59,14 +59,15 @@ export function createProxyHandlers(runtime: RuntimeController) {
       if (!payload.data || typeof payload.data !== 'object')
         return body
 
+      const timer = {
+        ...DEFAULT_TIMER_STATE,
+        ...(payload.data.timer && typeof payload.data.timer === 'object' ? payload.data.timer : {}),
+      }
+
       payload.data = {
         clicksTotal: 0,
-        timer: { ...DEFAULT_TIMER_STATE },
+        timer,
         ...payload.data,
-        timer: {
-          ...DEFAULT_TIMER_STATE,
-          ...(payload.data.timer && typeof payload.data.timer === 'object' ? payload.data.timer : {}),
-        },
       }
 
       return Buffer.from(JSON.stringify(payload))

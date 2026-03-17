@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Connect } from 'vite'
-import { getProjectLogPath, hubLogPath, logHub, readLogTail } from './logs'
-import type { RegistryController } from './registry'
-import type { RuntimeController } from './runtime'
+import { getProjectLogPath, hubLogPath, logHub, readLogTail } from './logs.js'
+import type { RegistryController } from './registry.js'
+import type { RuntimeController } from './runtime.js'
 
 function sendJson(response: ServerResponse, status: number, payload: unknown) {
   response.statusCode = status

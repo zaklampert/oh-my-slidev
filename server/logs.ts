@@ -1,5 +1,5 @@
 import { appendFile, readFile } from 'node:fs/promises'
-import { hubLogPath, ensureDataLayout, projectsLogsRoot, timestamp } from './config'
+import { hubLogPath, ensureDataLayout, projectsLogsRoot, timestamp } from './config.js'
 
 let writeQueue = Promise.resolve()
 

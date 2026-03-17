@@ -2,6 +2,10 @@
   "name": "slidev-hub",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "vite build && tsc -p tsconfig.server.json",
@@ -9,6 +13,7 @@
   },
   "dependencies": {
     "@myslides/shared-types": "file:./packages/shared-types",
+    "@slidev/cli": "^52.14.1",
     "@slidev/theme-default": "^0.25.0",
     "@vitejs/plugin-vue": "^6.0.4",
     "connect": "^3.7.0",
@@ -19,9 +24,15 @@
     "vue": "^3.5.29"
   },
   "devDependencies": {
+    "@types/connect": "^3.4.38",
     "@types/node": "^25.3.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

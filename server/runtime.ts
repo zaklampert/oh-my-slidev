@@ -1,26 +1,84 @@
-import type { SlidevConfig, SlidevData } from '../../slidev/packages/types/index.d.ts'
-import equal from 'fast-deep-equal'
+import { spawn } from 'node:child_process'
+import { request as httpRequest } from 'node:http'
+import { createRequire } from 'node:module'
+import process from 'node:process'
 import { getPort } from 'get-port-please'
-import { createServer as createSlidevServer } from '../../slidev/packages/slidev/node/commands/serve.ts'
-import { getThemeMeta } from '../../slidev/packages/slidev/node/integrations/themes.ts'
-import { resolveOptions } from '../../slidev/packages/slidev/node/options.ts'
-import { parser } from '../../slidev/packages/slidev/node/parser.ts'
-import { getProjectLogPath, logHub, logProject } from './logs'
-import type { RegistryController } from './registry'
-import type { HubState } from './state'
-import type { ActiveRuntime, ProjectRuntimeView, ProjectView } from './types'
-import { timestamp } from './config'
+import { getProjectLogPath, logHub, logProject } from './logs.js'
+import type { RegistryController } from './registry.js'
+import type { HubState } from './state.js'
+import type { ActiveRuntime, ProjectRuntimeView, ProjectView } from './types.js'
+import { timestamp } from './config.js'
 
-const CONFIG_RESTART_FIELDS: (keyof SlidevConfig)[] = [
-  'monaco',
-  'routerMode',
-  'fonts',
-  'css',
-  'mdc',
-  'editor',
-  'theme',
-  'seoMeta',
-]
+const require = createRequire(import.meta.url)
+const slidevCliPath = require.resolve('@slidev/cli/bin/slidev.mjs')
+const STARTUP_TIMEOUT_MS = 20_000
+const HEALTHCHECK_INTERVAL_MS = 250
+
+function appendRuntimeLog(runtime: ActiveRuntime, message: string) {
+  runtime.logTail.push(message)
+  runtime.logTail = runtime.logTail.slice(-120)
+  logProject(runtime.project.id, message)
+}
+
+function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function probeRuntime(port: number, base: string) {
+  return new Promise<number>((resolve, reject) => {
+    const req = httpRequest(
+      {
+        hostname: 'localhost',
+        port,
+        path: base,
+        method: 'GET',
+      },
+      (res) => {
+        res.resume()
+        resolve(res.statusCode || 0)
+      },
+    )
+
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+async function waitForRuntimeReady(runtime: ActiveRuntime) {
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < STARTUP_TIMEOUT_MS) {
+    const exitCode = runtime.process?.exitCode
+    if (exitCode != null)
+      throw new Error(`Slidev exited before becoming ready (exit code ${exitCode})`)
+
+    try {
+      const status = await probeRuntime(runtime.port, runtime.base)
+      if (status >= 200 && status < 500)
+        return
+    }
+    catch {
+      // Runtime not ready yet.
+    }
+
+    await wait(HEALTHCHECK_INTERVAL_MS)
+  }
+
+  throw new Error(`Slidev did not become ready within ${STARTUP_TIMEOUT_MS}ms`)
+}
+
+function buildSlidevArgs(runtime: ActiveRuntime) {
+  return [
+    slidevCliPath,
+    runtime.project.entry,
+    '--port',
+    String(runtime.port),
+    '--base',
+    runtime.base,
+    '--log',
+    'error',
+  ]
+}
 
 export interface RuntimeController {
   activateProject(id: string, reason?: string): Promise<ProjectView>
@@ -37,22 +95,20 @@ export function createRuntimeController(
   async function stopProject(id: string, reason = 'manual stop', clearActiveProject = true) {
     const runtime = state.runtimes.get(id)
     if (!runtime) {
-      if (clearActiveProject) {
+      if (clearActiveProject)
         await saveHubState()
-      }
       return null
     }
 
-    clearTimeout(runtime.restartTimer)
-    runtime.restartTimer = undefined
-
+    runtime.expectedExit = true
+    appendRuntimeLog(runtime, `stopping active runtime: ${reason}`)
     logHub(`stopping active runtime for ${runtime.project.id}: ${reason}`)
-    runtime.logTail.push(`stopping active runtime: ${reason}`)
-    runtime.logTail = runtime.logTail.slice(-120)
-    logProject(runtime.project.id, `stopping active runtime: ${reason}`)
 
     try {
-      await runtime.server?.close()
+      runtime.process?.kill('SIGTERM')
+      await wait(250)
+      if (runtime.process?.exitCode == null)
+        runtime.process?.kill('SIGKILL')
     }
     finally {
       state.runtimes.delete(id)
@@ -69,26 +125,6 @@ export function createRuntimeController(
         logTail: runtime.logTail,
       } satisfies ProjectRuntimeView,
     }
-  }
-
-  function scheduleActiveRestart(projectId: string, reason: string) {
-    const runtime = state.runtimes.get(projectId)
-    if (!runtime)
-      return
-    clearTimeout(runtime.restartTimer)
-    runtime.restartTimer = setTimeout(() => {
-      void (async () => {
-        const current = state.runtimes.get(projectId)
-        if (!current)
-          return
-        logHub(`restarting active runtime for ${projectId}: ${reason}`)
-        current.logTail.push(`restarting active runtime: ${reason}`)
-        current.logTail = current.logTail.slice(-120)
-        logProject(projectId, `restarting active runtime: ${reason}`)
-        await stopProject(projectId, reason, false)
-        await activateProject(projectId, `${reason} restart`)
-      })()
-    }, 500)
   }
 
   async function activateProject(id: string, reason = 'manual activate') {
@@ -119,94 +155,70 @@ export function createRuntimeController(
       logPath: getProjectLogPath(project.id),
       logTail: [],
     }
+
     state.runtimes.set(id, runtime)
     await saveHubState()
 
+    appendRuntimeLog(runtime, `activate requested: ${reason}`)
+    appendRuntimeLog(runtime, `internal port ${port}`)
+    appendRuntimeLog(runtime, `base path ${runtime.base}`)
     logHub(`activating ${project.id} on internal port ${port} with base ${runtime.base}`)
-    runtime.logTail.push(`activate requested: ${reason}`, `internal port ${port}`, `base path ${runtime.base}`)
-    logProject(project.id, `activate requested: ${reason}`)
-    logProject(project.id, `internal port ${port}`)
-    logProject(project.id, `base path ${runtime.base}`)
 
-    const options = await resolveOptions({ entry: project.entry, base: runtime.base }, 'dev')
-    runtime.options = options
-
-    const slidevServer = await createSlidevServer(
-      options,
+    const child = spawn(
+      process.execPath,
+      buildSlidevArgs(runtime),
       {
-        server: {
-          host: 'localhost',
-          port,
-          strictPort: true,
+        cwd: project.dir,
+        env: {
+          ...process.env,
+          FORCE_COLOR: '0',
         },
-        logLevel: 'error',
-        base: runtime.base,
-      },
-      {
-        async loadData(loadedSource) {
-          const currentRuntime = state.runtimes.get(project.id)
-          if (!currentRuntime || !currentRuntime.options)
-            return false
-
-          const { data: oldData, entry } = currentRuntime.options
-          const loaded = await parser.load(currentRuntime.options.userRoot, entry, loadedSource, 'dev')
-          const themeRaw = loaded.headmatter.theme as string || 'default'
-
-          if (currentRuntime.options.themeRaw !== themeRaw) {
-            currentRuntime.logTail.push('theme changed, scheduling restart')
-            currentRuntime.logTail = currentRuntime.logTail.slice(-120)
-            logProject(project.id, 'theme changed, scheduling restart')
-            scheduleActiveRestart(project.id, 'theme change')
-            return false
-          }
-
-          const themeMeta = currentRuntime.options.themeRoots[0] ? await getThemeMeta(themeRaw, currentRuntime.options.themeRoots[0]) : undefined
-          const newData: SlidevData = {
-            ...loaded,
-            themeMeta,
-            config: parser.resolveConfig(loaded.headmatter, themeMeta, entry),
-          }
-
-          if (CONFIG_RESTART_FIELDS.some(field => !equal(newData.config[field], oldData.config[field]))) {
-            currentRuntime.logTail.push('config changed, scheduling restart')
-            currentRuntime.logTail = currentRuntime.logTail.slice(-120)
-            logProject(project.id, 'config changed, scheduling restart')
-            scheduleActiveRestart(project.id, 'config change')
-            return false
-          }
-
-          if ((newData.features.katex && !oldData.features.katex) || (newData.features.monaco && !oldData.features.monaco)) {
-            currentRuntime.logTail.push('feature set changed, scheduling restart')
-            currentRuntime.logTail = currentRuntime.logTail.slice(-120)
-            logProject(project.id, 'feature set changed, scheduling restart')
-            scheduleActiveRestart(project.id, 'feature change')
-            return false
-          }
-
-          return newData
-        },
+        // The published Slidev CLI binds keyboard shortcuts on stdin and exits
+        // immediately if it is spawned without a live input stream.
+        stdio: ['pipe', 'pipe', 'pipe'],
       },
     )
 
-    runtime.server = slidevServer
+    runtime.process = child
+    runtime.pid = child.pid ?? undefined
+
+    child.stdout?.on('data', (chunk) => {
+      appendRuntimeLog(runtime, `stdout ${String(chunk).trimEnd()}`)
+    })
+
+    child.stderr?.on('data', (chunk) => {
+      appendRuntimeLog(runtime, `stderr ${String(chunk).trimEnd()}`)
+    })
+
+    child.on('error', (error) => {
+      appendRuntimeLog(runtime, `process error: ${error.message}`)
+    })
+
+    child.on('exit', (code, signal) => {
+      if (runtime.expectedExit)
+        return
+
+      appendRuntimeLog(runtime, `runtime exited unexpectedly (code=${code ?? 'null'}, signal=${signal ?? 'null'})`)
+      logHub(`runtime exited unexpectedly for ${project.id} (code=${code ?? 'null'}, signal=${signal ?? 'null'})`)
+      state.runtimes.delete(id)
+      void saveHubState()
+    })
 
     try {
-      await slidevServer.listen()
+      await waitForRuntimeReady(runtime)
       runtime.status = 'running'
       runtime.error = undefined
-      runtime.logTail.push(`runtime listening on internal port ${port}`)
-      runtime.logTail = runtime.logTail.slice(-120)
-      logProject(project.id, `runtime listening on internal port ${port}`)
+      appendRuntimeLog(runtime, `runtime listening on internal port ${port}`)
       logHub(`active runtime ready for ${project.id} at ${runtime.base}`)
     }
     catch (error) {
+      runtime.expectedExit = true
+      runtime.process?.kill('SIGTERM')
       state.runtimes.delete(id)
       await saveHubState()
       runtime.status = 'error'
       runtime.error = error instanceof Error ? error.message : 'Failed to activate project'
-      runtime.logTail.push(`activation failed: ${runtime.error}`)
-      runtime.logTail = runtime.logTail.slice(-120)
-      logProject(project.id, `activation failed: ${runtime.error}`)
+      appendRuntimeLog(runtime, `activation failed: ${runtime.error}`)
       logHub(`failed to activate ${project.id}: ${runtime.error}`)
       throw error
     }

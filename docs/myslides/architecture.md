@@ -144,10 +144,6 @@ Current working implementation lives in:
 
 - `slidev-hub/`
 
-Transitional dependency:
-
-- `slidev-hub` still executes against the sibling `slidev/` checkout for Slidev runtime internals
-
 What it currently proves:
 
 - deck registry
@@ -164,6 +160,8 @@ What the current implementation has taught us:
 - root control channels like `/@server-reactive/*` and `/@server-ref/*` must be routed by deck context
 - presenter sync depends on Slidev's Vite/HMR-style transport, not just static HTTP routes
 - malformed nav sync payloads can break presenter UI unless the gateway preserves required state shape
+- a standalone hub can launch published `@slidev/cli` runtimes without importing Slidev source internals
+- the published Slidev CLI must be spawned with a live stdin stream; if stdin is ignored it exits immediately after boot
 
 What it does not represent:
 
@@ -189,8 +187,8 @@ Only make Slidev-core changes when:
 
 Current temporary exception:
 
-- `slidev-hub` still relies on a few source-level compatibility patches inside `slidev/` so the local checkout can run under Node 22 + `tsx`
-- these patches should be treated as transitional and reduced over time
+- local experimentation may still keep unrelated compatibility patches in the sibling `slidev/` checkout
+- `slidev-hub` itself should avoid depending on them
 
 ## Enterprise Direction
 

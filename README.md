@@ -4,10 +4,10 @@
 
 ## Current status
 
-- boots as a sibling app outside the Slidev monorepo
+- runs as a standalone app outside the Slidev monorepo
 - owns its own data under `.slidev-hub/`
 - owns its own managed decks under `hub-projects/`
-- still points at the local sibling `slidev/` checkout for Slidev internals during this transition
+- launches the published `@slidev/cli` package for active deck runtimes
 - is the primary working hub implementation in this workspace
 - currently defaults to `http://localhost:4310`
 
@@ -16,30 +16,53 @@
 ```bash
 pnpm install
 pnpm run dev
+pnpm run build
+pnpm start
 ```
 
 If `4310` is already in use, stop the existing hub process first or override `PORT`.
 
-## Transitional architecture
+## Runtime model
 
-Right now `slidev-hub` is intentionally in between two states:
-
-1. no longer living inside `slidev/packages/hub`
-2. not yet fully decoupled from local Slidev source internals
-
-That is expected at this stage. The next extraction goals are:
-
-- keep stabilizing the sibling app
-- reduce direct internal Slidev imports over time
-- keep shared vocabulary in reusable packages
-- move toward clearer boundaries with `slidev-agent`
-
-## Runtime Notes
-
-- `slidev-hub` currently launches real per-deck Slidev runtimes and proxies them under slug routes such as `/<slug>/`, `/<slug>/presenter/`, and `/<slug>/overview/`.
+- `slidev-hub` launches real per-deck Slidev runtimes and proxies them under slug routes such as `/<slug>/`, `/<slug>/presenter/`, and `/<slug>/overview/`.
 - Presenter/viewer sync depends on Slidev's Vite and `vite-plugin-vue-server-ref` transport, so the gateway must preserve both HTTP and websocket semantics.
 - Root control-channel requests like `/@server-reactive/nav` are deck-specific and are routed by `Referer`.
-- Local execution against the sibling `slidev/` checkout currently requires a few temporary compatibility patches in that repo for Node 22 + `tsx`.
+- The hub normalizes nav sync payloads so presenter mode does not crash on missing timer state.
+
+## Railway
+
+`slidev-hub` now has a valid production path:
+
+```bash
+pnpm run build
+pnpm start
+```
+
+Recommended Railway setup:
+
+1. Create a Railway service from this repo.
+2. Attach a persistent volume and mount it at `/data`.
+3. Set these environment variables:
+
+```bash
+PORT=4310
+NODE_ENV=production
+SLIDEV_HUB_DATA_ROOT=/data/slidev-hub
+SLIDEV_HUB_PROJECTS_ROOT=/data/slidev-hub/projects
+```
+
+4. Use the provided [`railway.json`](/Users/zaklampert/projects/oh-my-slidev/slidev-hub/railway.json) or equivalent commands:
+
+```bash
+pnpm run build
+pnpm start
+```
+
+Notes:
+
+- first boot on Railway will have an empty deck registry
+- decks, registry state, and logs should live on the persistent volume
+- presenter sync requires live Slidev runtimes; this is not a static-export deployment model
 
 ## Known Quirks
 

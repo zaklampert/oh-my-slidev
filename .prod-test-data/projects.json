@@ -1,0 +1,14 @@
+{
+  "projects": [
+    {
+      "id": "railway-smoke-test-1773743217048",
+      "name": "Railway Smoke Test",
+      "slug": "railway-smoke-test",
+      "dir": "/Users/zaklampert/projects/oh-my-slidev/slidev-hub/hub-projects/railway-smoke-test",
+      "entry": "/Users/zaklampert/projects/oh-my-slidev/slidev-hub/hub-projects/railway-smoke-test/slides.md",
+      "createdAt": "2026-03-17T10:26:57.046Z",
+      "updatedAt": "2026-03-17T10:27:02.171Z",
+      "source": "managed"
+    }
+  ]
+}

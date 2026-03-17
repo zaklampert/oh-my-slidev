@@ -1,6 +1,5 @@
 import type { Deck, DeckRuntime, DeckView, RuntimeStatus } from '@myslides/shared-types'
-import type { ResolvedSlidevOptions } from '../../slidev/packages/types/index.d.ts'
-import type { ViteDevServer } from 'vite'
+import type { ChildProcess } from 'node:child_process'
 
 export type ProjectRecord = Deck
 
@@ -20,13 +19,13 @@ export interface ActiveRuntime {
   port: number
   base: string
   status: RuntimeStatus
+  pid?: number
   lastStartedAt: string
   error?: string
   logPath: string
   logTail: string[]
-  restartTimer?: ReturnType<typeof setTimeout>
-  options?: ResolvedSlidevOptions
-  server?: ViteDevServer
+  process?: ChildProcess
+  expectedExit?: boolean
 }
 
 export type ProjectView = DeckView

@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
-import { ensureDataLayout, managedProjectsRoot, registryPath, slugify, starterSlides } from './config'
-import { getProjectLogPath, logHub, logProject } from './logs'
-import type { HubState } from './state'
-import type { ProjectRecord, ProjectRuntimeView, ProjectView, RegistryFile } from './types'
+import { ensureDataLayout, managedProjectsRoot, registryPath, slugify, starterSlides } from './config.js'
+import { getProjectLogPath, logHub, logProject } from './logs.js'
+import type { HubState } from './state.js'
+import type { ProjectRecord, ProjectRuntimeView, ProjectView, RegistryFile } from './types.js'
 
 function guessRoutePrefix(entryPath: string) {
   try {
@@ -69,7 +69,7 @@ export function createRegistryController(
 
     return {
       status: runtime.status,
-      pid: undefined,
+      pid: runtime.pid,
       port: runtime.port,
       lastStartedAt: runtime.lastStartedAt,
       error: runtime.error,

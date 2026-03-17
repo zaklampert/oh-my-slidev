@@ -1,4 +1,4 @@
-import type { ActiveRuntime } from './types'
+import type { ActiveRuntime } from './types.js'
 
 export interface HubState {
   runtimes: Map<string, ActiveRuntime>

@@ -12,7 +12,6 @@ Current implementation lives mostly in:
 
 - `slidev-hub/server/*`
 - `slidev-hub/src/App.vue`
-- temporary compatibility shims inside `slidev/packages/slidev/node/*`
 
 The current server stack still combines too many responsibilities:
 
@@ -38,7 +37,8 @@ These are now implementation constraints, not open guesses:
 - root control-channel requests need deck context, currently inferred from `Referer`
 - some slugged control writes must be rewritten before forwarding
 - nav sync payloads should preserve a valid `timer` shape to avoid presenter crashes
-- local execution against the sibling `slidev/` source tree still requires temporary Node 22 compatibility shims
+- the published Slidev CLI exits immediately if spawned with stdin ignored; runtime launchers must keep stdin open
+- `slidev-hub` now has a valid standalone production path via `pnpm run build && pnpm start`
 
 ## Target Package Split
 
