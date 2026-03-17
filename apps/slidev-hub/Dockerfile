@@ -26,6 +26,7 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/slidev-hub/package.json ./apps/slidev-hub/package.json
+COPY --from=build /app/apps/slidev-hub/node_modules ./apps/slidev-hub/node_modules
 COPY --from=build /app/apps/slidev-hub/dist ./apps/slidev-hub/dist
 COPY --from=build /app/packages ./packages
 
