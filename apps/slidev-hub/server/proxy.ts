@@ -34,6 +34,11 @@ function isRootSlidevVirtualModule(pathname: string) {
     || pathname.startsWith('/@slidev/')
 }
 
+function isRootFsModule(pathname: string) {
+  return pathname === '/@fs'
+    || pathname.startsWith('/@fs/')
+}
+
 function isServerRefWrite(pathname: string, runtimePrefix: string, method: string) {
   return method !== 'GET'
     && method !== 'HEAD'
@@ -162,6 +167,7 @@ export function createProxyHandlers(runtime: RuntimeController) {
     const canResolveFromReferer = isServerRefChannel(pathname)
       || isSlidevEditorEndpoint(pathname)
       || isRootSlidevVirtualModule(pathname)
+      || isRootFsModule(pathname)
 
     const targetRuntime = runtime.getRuntimeForPath(pathname)
       ?? (canResolveFromReferer ? getRuntimeFromReferer(request) : null)
