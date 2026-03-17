@@ -1,11 +1,10 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
 
 const addonRoot = fileURLToPath(new URL('.', import.meta.url))
 const customEditorPath = resolve(addonRoot, 'src/SideEditor.vue')
 
-export default defineConfig({
+export default {
   resolve: {
     alias: [
       {
@@ -18,4 +17,4 @@ export default defineConfig({
       },
     ],
   },
-})
+}
