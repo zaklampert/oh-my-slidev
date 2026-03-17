@@ -23,6 +23,11 @@ function isSlidevEditorEndpoint(pathname: string) {
     || pathname.startsWith('/__slidev/')
 }
 
+function isSlidevVirtualModule(pathname: string, runtimePrefix: string) {
+  return pathname === `${runtimePrefix}/@slidev`
+    || pathname.startsWith(`${runtimePrefix}/@slidev/`)
+}
+
 function isServerRefWrite(pathname: string, runtimePrefix: string, method: string) {
   return method !== 'GET'
     && method !== 'HEAD'
@@ -135,7 +140,7 @@ export function createProxyHandlers(runtime: RuntimeController) {
       return null
 
     const runtimePrefix = `/${targetRuntime.project.slug}`
-    const targetPath = isServerRefWrite(pathname, runtimePrefix, method)
+    const targetPath = (isServerRefWrite(pathname, runtimePrefix, method) || isSlidevVirtualModule(pathname, runtimePrefix))
       ? pathname.slice(runtimePrefix.length) || '/'
       : pathname
 
