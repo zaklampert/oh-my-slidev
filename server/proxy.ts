@@ -40,6 +40,20 @@ function isNavWrite(targetPath: string, method: string) {
 }
 
 export function createProxyHandlers(runtime: RuntimeController) {
+  function getForwardedHeaders(request: IncomingMessage, targetPort: number) {
+    const host = request.headers.host || `localhost:${targetPort}`
+    const forwardedHost = request.headers['x-forwarded-host']?.toString().split(',')[0]?.trim() || host
+    const forwardedProto = request.headers['x-forwarded-proto']?.toString().split(',')[0]?.trim() || 'http'
+
+    return {
+      ...request.headers,
+      host,
+      'x-forwarded-host': forwardedHost,
+      'x-forwarded-proto': forwardedProto,
+      'x-forwarded-port': request.headers['x-forwarded-port']?.toString().split(',')[0]?.trim() || '',
+    }
+  }
+
   async function readRequestBody(request: IncomingMessage) {
     const chunks: Buffer[] = []
     for await (const chunk of request)
@@ -134,13 +148,12 @@ export function createProxyHandlers(runtime: RuntimeController) {
           method,
           path: target.path,
           headers: {
-            ...request.headers,
+            ...getForwardedHeaders(request, targetPort),
             ...(body
               ? {
                   'content-length': String(body.length),
                 }
               : {}),
-            host: `localhost:${targetPort}`,
           },
         },
         (proxyRes) => {
@@ -174,10 +187,7 @@ export function createProxyHandlers(runtime: RuntimeController) {
       hostname: 'localhost',
       port: target.runtime.port,
       path: target.path,
-      headers: {
-        ...request.headers,
-        host: `localhost:${target.runtime.port}`,
-      },
+      headers: getForwardedHeaders(request, target.runtime.port),
     })
 
     proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
