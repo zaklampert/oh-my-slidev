@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Connect } from 'vite'
+import { publicBaseUrl } from './config.js'
 import { getProjectLogPath, hubLogPath, logHub, readLogTail } from './logs.js'
 import type { RegistryController } from './registry.js'
 import type { RuntimeController } from './runtime.js'
@@ -19,6 +20,18 @@ function readBody(request: IncomingMessage) {
   })
 }
 
+function getExternalBaseUrl(request: IncomingMessage) {
+  if (publicBaseUrl)
+    return publicBaseUrl
+
+  const proto = request.headers['x-forwarded-proto']?.toString().split(',')[0]?.trim()
+    || 'http'
+  const host = request.headers['x-forwarded-host']?.toString().split(',')[0]?.trim()
+    || request.headers.host
+
+  return host ? `${proto}://${host}` : ''
+}
+
 export function createApiMiddleware(
   registry: RegistryController,
   runtime: RuntimeController,
@@ -29,13 +42,14 @@ export function createApiMiddleware(
   async function handleApi(request: IncomingMessage, response: ServerResponse) {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
     const { pathname } = url
+    const externalBaseUrl = getExternalBaseUrl(request)
     logHub(`${request.method || 'GET'} ${pathname}`)
 
     if (request.method === 'GET' && pathname === '/api/projects') {
       sendJson(response, 200, {
         activeProjectId: getActiveProjectId(),
         activeProjectIds: getActiveProjectIds(),
-        projects: await registry.listProjects(),
+        projects: await registry.listProjects(externalBaseUrl),
       })
       return true
     }
@@ -52,7 +66,7 @@ export function createApiMiddleware(
       const body = JSON.parse(await readBody(request) || '{}') as { name?: string }
       if (!body.name?.trim())
         throw new Error('Project name is required')
-      sendJson(response, 200, { project: await registry.createManagedProject(body.name.trim()) })
+      sendJson(response, 200, { project: await registry.createManagedProject(body.name.trim(), externalBaseUrl) })
       return true
     }
 
@@ -60,19 +74,31 @@ export function createApiMiddleware(
       const body = JSON.parse(await readBody(request) || '{}') as { path?: string }
       if (!body.path?.trim())
         throw new Error('Project path is required')
-      sendJson(response, 200, { project: await registry.importExistingProject(body.path.trim()) })
+      sendJson(response, 200, { project: await registry.importExistingProject(body.path.trim(), externalBaseUrl) })
       return true
     }
 
     const activateMatch = pathname.match(/^\/api\/projects\/([^/]+)\/activate$/)
     if (request.method === 'POST' && activateMatch) {
-      sendJson(response, 200, { project: await runtime.activateProject(activateMatch[1]) })
+      const project = await runtime.activateProject(activateMatch[1])
+      sendJson(response, 200, {
+        project: {
+          ...project,
+          runtime: registry.getProjectRuntime(project, externalBaseUrl),
+        },
+      })
       return true
     }
 
     const startMatch = pathname.match(/^\/api\/projects\/([^/]+)\/start$/)
     if (request.method === 'POST' && startMatch) {
-      sendJson(response, 200, { project: await runtime.activateProject(startMatch[1]) })
+      const project = await runtime.activateProject(startMatch[1])
+      sendJson(response, 200, {
+        project: {
+          ...project,
+          runtime: registry.getProjectRuntime(project, externalBaseUrl),
+        },
+      })
       return true
     }
 
@@ -85,7 +111,7 @@ export function createApiMiddleware(
         project: {
           ...project,
           isActive: false,
-          runtime: registry.getProjectRuntime(project),
+          runtime: registry.getProjectRuntime(project, externalBaseUrl),
         },
       })
       return true
@@ -100,7 +126,7 @@ export function createApiMiddleware(
         project: {
           ...project,
           isActive: false,
-          runtime: registry.getProjectRuntime(project),
+          runtime: registry.getProjectRuntime(project, externalBaseUrl),
         },
       })
       return true

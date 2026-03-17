@@ -42,7 +42,7 @@ async function saveHubState() {
   }, null, 2)}\n`)
 }
 
-const registry = createRegistryController(state, hubPort)
+const registry = createRegistryController(state)
 const runtime = createRuntimeController(state, registry, saveHubState)
 const proxy = createProxyHandlers(runtime)
 

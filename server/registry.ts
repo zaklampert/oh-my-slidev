@@ -38,23 +38,25 @@ async function ensureUniqueDir(baseSlug: string) {
 }
 
 export interface RegistryController {
-  listProjects(): Promise<ProjectView[]>
-  createManagedProject(name: string): Promise<ProjectView>
-  importExistingProject(projectPath: string): Promise<ProjectView>
+  listProjects(externalBaseUrl?: string): Promise<ProjectView[]>
+  createManagedProject(name: string, externalBaseUrl?: string): Promise<ProjectView>
+  importExistingProject(projectPath: string, externalBaseUrl?: string): Promise<ProjectView>
   findProject(id: string): Promise<ProjectRecord>
   updateProjectTimestamp(id: string): Promise<void>
-  getProjectRuntime(project: ProjectRecord): ProjectRuntimeView
+  getProjectRuntime(project: ProjectRecord, externalBaseUrl?: string): ProjectRuntimeView
 }
 
 export function createRegistryController(
   state: HubState,
-  hubPort: number,
 ): RegistryController {
-  function getExternalBaseUrl(project: ProjectRecord) {
-    return `http://localhost:${hubPort}/${project.slug}/`
+  function getExternalBaseUrl(project: ProjectRecord, externalBaseUrl?: string) {
+    const origin = (externalBaseUrl || '').replace(/\/+$/, '')
+    if (!origin)
+      return undefined
+    return `${origin}/${project.slug}/`
   }
 
-  function getProjectRuntime(project: ProjectRecord): ProjectRuntimeView {
+  function getProjectRuntime(project: ProjectRecord, externalBaseUrl?: string): ProjectRuntimeView {
     const runtime = state.runtimes.get(project.id)
     if (!runtime) {
       return {
@@ -65,7 +67,7 @@ export function createRegistryController(
     }
 
     const routePrefix = guessRoutePrefix(project.entry)
-    const externalBase = getExternalBaseUrl(project)
+    const externalBase = getExternalBaseUrl(project, externalBaseUrl)
 
     return {
       status: runtime.status,
@@ -76,12 +78,12 @@ export function createRegistryController(
       logPath: runtime.logPath,
       logTail: runtime.logTail,
       url: externalBase,
-      presenterUrl: `${externalBase}${routePrefix === '/#/' ? '#/' : ''}presenter/`,
-      overviewUrl: `${externalBase}${routePrefix === '/#/' ? '#/' : ''}overview/`,
+      presenterUrl: externalBase ? `${externalBase}${routePrefix === '/#/' ? '#/' : ''}presenter/` : undefined,
+      overviewUrl: externalBase ? `${externalBase}${routePrefix === '/#/' ? '#/' : ''}overview/` : undefined,
     }
   }
 
-  async function listProjects() {
+  async function listProjects(externalBaseUrl?: string) {
     const registry = await loadRegistry()
     return registry.projects
       .slice()
@@ -89,11 +91,11 @@ export function createRegistryController(
       .map(project => ({
         ...project,
         isActive: state.runtimes.has(project.id),
-        runtime: getProjectRuntime(project),
+        runtime: getProjectRuntime(project, externalBaseUrl),
       }))
   }
 
-  async function createManagedProject(name: string) {
+  async function createManagedProject(name: string, externalBaseUrl?: string) {
     const registry = await loadRegistry()
     const slug = await ensureUniqueDir(slugify(name))
     const dir = resolve(managedProjectsRoot, slug)
@@ -123,11 +125,11 @@ export function createRegistryController(
     return {
       ...project,
       isActive: false,
-      runtime: getProjectRuntime(project),
+      runtime: getProjectRuntime(project, externalBaseUrl),
     }
   }
 
-  async function importExistingProject(projectPath: string) {
+  async function importExistingProject(projectPath: string, externalBaseUrl?: string) {
     const registry = await loadRegistry()
     const dir = resolve(projectPath.trim())
     const entry = resolve(dir, 'slides.md')
@@ -143,7 +145,7 @@ export function createRegistryController(
       return {
         ...duplicate,
         isActive: state.runtimes.has(duplicate.id),
-        runtime: getProjectRuntime(duplicate),
+        runtime: getProjectRuntime(duplicate, externalBaseUrl),
       }
     }
 
@@ -167,7 +169,7 @@ export function createRegistryController(
     return {
       ...project,
       isActive: false,
-      runtime: getProjectRuntime(project),
+      runtime: getProjectRuntime(project, externalBaseUrl),
     }
   }
 

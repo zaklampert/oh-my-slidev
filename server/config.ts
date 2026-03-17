@@ -29,6 +29,7 @@ export const managedProjectsRoot = resolveEnvPath(
   railwayVolumeRoot ? resolve(dataRoot, 'projects') : resolve(workspaceRoot, 'hub-projects'),
 )
 export const hubPort = Number(process.env.PORT || 4310)
+export const publicBaseUrl = process.env.SLIDEV_HUB_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '') || ''
 
 export function timestamp() {
   return new Date().toISOString()
