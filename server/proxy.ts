@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { request as httpRequest } from 'node:http'
+import { readFileSync } from 'node:fs'
 import { logHub } from './logs.js'
 import type { RuntimeController } from './runtime.js'
 
@@ -50,6 +51,15 @@ function isNavWrite(targetPath: string, method: string) {
 }
 
 export function createProxyHandlers(runtime: RuntimeController) {
+  function isHashRouter(runtimeEntry: string) {
+    try {
+      return /\brouterMode:\s*hash\b/.test(readFileSync(runtimeEntry, 'utf8'))
+    }
+    catch {
+      return false
+    }
+  }
+
   function getExternalHost(request: IncomingMessage, targetPort: number) {
     return request.headers['x-forwarded-host']?.toString().split(',')[0]?.trim()
       || request.headers.host
@@ -74,12 +84,25 @@ export function createProxyHandlers(runtime: RuntimeController) {
     return method === 'GET' && (targetPath === '/@vite/client' || targetPath.endsWith('/@vite/client'))
   }
 
+  function shouldRewriteSlidevEnvModule(targetPath: string, method: string) {
+    return method === 'GET' && targetPath.includes('/@slidev/client/env.ts')
+  }
+
   function rewriteViteClient(body: Buffer, request: IncomingMessage, targetPort: number, runtimeBase: string) {
     const externalHost = getExternalHost(request, targetPort)
     const hostWithBase = `${externalHost}${runtimeBase}`
     const rewritten = body.toString('utf8')
       .replace(/const serverHost = ".*?";/, `const serverHost = "${hostWithBase}";`)
       .replace(/const directSocketHost = ".*?";/, `const directSocketHost = "${hostWithBase}";`)
+
+    return Buffer.from(rewritten)
+  }
+
+  function rewriteSlidevEnvModule(body: Buffer, targetRuntime: { project: { entry: string } }) {
+    const hashRoute = isHashRouter(targetRuntime.project.entry)
+    const rewritten = body.toString('utf8')
+      .replace(/\b__DEV__\b/g, 'true')
+      .replace(/\b__SLIDEV_HASH_ROUTE__\b/g, hashRoute ? 'true' : 'false')
 
     return Buffer.from(rewritten)
   }
@@ -202,6 +225,20 @@ export function createProxyHandlers(runtime: RuntimeController) {
             proxyRes.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
             proxyRes.on('end', () => {
               const rewrittenBody = rewriteViteClient(Buffer.concat(chunks), request, targetPort, target.runtime.base)
+              response.writeHead(proxyRes.statusCode || 500, {
+                ...proxyRes.headers,
+                'content-length': String(rewrittenBody.length),
+              })
+              response.end(rewrittenBody)
+            })
+            return
+          }
+
+          if (shouldRewriteSlidevEnvModule(target.path, method)) {
+            const chunks: Buffer[] = []
+            proxyRes.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
+            proxyRes.on('end', () => {
+              const rewrittenBody = rewriteSlidevEnvModule(Buffer.concat(chunks), target.runtime)
               response.writeHead(proxyRes.statusCode || 500, {
                 ...proxyRes.headers,
                 'content-length': String(rewrittenBody.length),
