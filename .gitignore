@@ -1,0 +1,13 @@
+.DS_Store
+node_modules/
+dist/
+.turbo/
+.sources/
+apps/slidev-hub/.slidev-hub/
+apps/slidev-hub/.legacy/
+apps/slidev-hub/.prod-test-data/
+apps/slidev-hub/hub-projects/
+apps/slidev-hub/coverage/
+apps/slidev-hub/.env
+apps/slidev-hub/.env.*
+!apps/slidev-hub/.env.example

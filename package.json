@@ -1,0 +1,19 @@
+{
+  "name": "oh-my-slidev",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev:hub": "pnpm --dir apps/slidev-hub run dev",
+    "build:hub": "pnpm --dir apps/slidev-hub run build",
+    "start:hub": "pnpm --dir apps/slidev-hub run start",
+    "build": "turbo run build --filter=./apps/slidev-hub",
+    "check": "turbo run check --continue --filter=./apps/slidev-hub"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3"
+  }
+}
