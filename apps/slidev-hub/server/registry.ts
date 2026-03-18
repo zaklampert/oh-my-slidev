@@ -42,6 +42,7 @@ export interface RegistryController {
   createManagedProject(name: string, externalBaseUrl?: string): Promise<ProjectView>
   importExistingProject(projectPath: string, externalBaseUrl?: string): Promise<ProjectView>
   findProject(id: string): Promise<ProjectRecord>
+  findProjectBySlug(slug: string): Promise<ProjectRecord>
   updateProjectTimestamp(id: string): Promise<void>
   getProjectRuntime(project: ProjectRecord, externalBaseUrl?: string): ProjectRuntimeView
 }
@@ -181,6 +182,14 @@ export function createRegistryController(
     return project
   }
 
+  async function findProjectBySlug(slug: string) {
+    const registry = await loadRegistry()
+    const project = registry.projects.find(entry => entry.slug === slug)
+    if (!project)
+      throw new Error(`Unknown project slug: ${slug}`)
+    return project
+  }
+
   async function updateProjectTimestamp(id: string) {
     const registry = await loadRegistry()
     const project = registry.projects.find(entry => entry.id === id)
@@ -195,6 +204,7 @@ export function createRegistryController(
     createManagedProject,
     importExistingProject,
     findProject,
+    findProjectBySlug,
     updateProjectTimestamp,
     getProjectRuntime,
   }

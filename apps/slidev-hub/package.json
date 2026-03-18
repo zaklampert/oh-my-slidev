@@ -13,6 +13,7 @@
     "start": "node dist/server/index.js"
   },
   "dependencies": {
+    "@myslides/slidev-agent-runtime": "workspace:*",
     "@myslides/shared-types": "workspace:*",
     "@slidev/cli": "^52.14.1",
     "@slidev/client": "^52.14.1",

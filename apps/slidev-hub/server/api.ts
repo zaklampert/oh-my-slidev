@@ -97,6 +97,19 @@ export function createApiMiddleware(
       return true
     }
 
+    const projectBySlugMatch = pathname.match(/^\/api\/projects\/slug\/([^/]+)$/)
+    if (request.method === 'GET' && projectBySlugMatch) {
+      const project = await registry.findProjectBySlug(projectBySlugMatch[1])
+      sendJson(response, 200, {
+        project: {
+          ...project,
+          isActive: getActiveProjectIds().includes(project.id),
+          runtime: registry.getProjectRuntime(project, externalBaseUrl),
+        },
+      })
+      return true
+    }
+
     if (request.method === 'GET' && pathname === '/api/logs/hub') {
       sendJson(response, 200, {
         path: hubLogPath,
