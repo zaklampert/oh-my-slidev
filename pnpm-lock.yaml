@@ -99,6 +99,10 @@ importers:
       '@myslides/slidev-agent-shared-types':
         specifier: workspace:*
         version: link:../slidev-agent-shared-types
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/slidev-agent-shared-types: {}
 

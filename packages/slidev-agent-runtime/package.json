@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
   },
   "repository": {
     "type": "git",
@@ -17,5 +23,8 @@
     "@mariozechner/pi-ai": "^0.58.4",
     "@mariozechner/pi-coding-agent": "^0.58.4",
     "@myslides/slidev-agent-shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

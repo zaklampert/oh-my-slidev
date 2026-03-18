@@ -7,8 +7,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "tsx server/index.ts",
-    "build": "vite build && tsc -p tsconfig.server.json",
+    "dev": "pnpm --filter @myslides/slidev-agent-runtime build && tsx server/index.ts",
+    "build": "pnpm --filter @myslides/slidev-agent-runtime build && vite build && tsc -p tsconfig.server.json",
     "check": "vue-tsc --noEmit -p tsconfig.json",
     "start": "node dist/server/index.js"
   },
