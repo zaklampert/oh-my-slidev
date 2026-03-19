@@ -60,6 +60,32 @@ async function ensureDir(path: string) {
   await mkdir(path, { recursive: true })
 }
 
+function stripLeadingFrontmatter(content: string) {
+  return content.replace(/^---\n[\s\S]*?\n---\n?/, '')
+}
+
+function detectDefaultSlotViolations(content: string) {
+  const warnings: string[] = []
+  const slides = content.split(/\n---\s*\n/g)
+
+  for (const [index, slide] of slides.entries()) {
+    if (!slide.includes('<template v-slot:default'))
+      continue
+
+    const body = stripLeadingFrontmatter(slide)
+    const firstTemplateIndex = body.search(/<template\s+v-slot:/)
+    if (firstTemplateIndex < 0)
+      continue
+
+    const prefix = body.slice(0, firstTemplateIndex).trim()
+    if (prefix) {
+      warnings.push(`Slide ${index + 1} contains content before an explicit <template v-slot:default> block.`)
+    }
+  }
+
+  return warnings
+}
+
 function asErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown error.'
 }
@@ -127,6 +153,8 @@ function buildRuntimeSystemPrompt(project: AttachedProjectRef) {
     'Use the available Slidev skills progressively instead of front-loading every reference.',
     'Before making edits, inspect the relevant project files and only pull the specific Slidev skill details you need.',
     'Prefer targeted, minimal edits that preserve working Slidev syntax and structure.',
+    'When editing layout slot slides, never place normal slide content before an explicit <template v-slot:default> block.',
+    'If a slide uses named slots, keep all default-slot content inside that slot or use Slidev slot sugar markers like ::right:: and ::default::.',
     'You may work across the entire attached Slidev project root, including imported markdown, components, styles, and config files.',
     `Attached project root: ${project.rootDir}`,
     `Primary entry file: ${project.entryFile}`,
@@ -445,6 +473,7 @@ export function createSlidevAgentRuntime(config: AgentRuntimeConfig): SlidevAgen
 
       const afterFiles = await collectProjectFiles(projectRef.rootDir)
       const changedFiles: AgentFileChange[] = []
+      const validationWarnings: string[] = []
 
       for (const [path, fingerprint] of afterFiles.entries()) {
         const previous = beforeFiles.get(path)
@@ -482,6 +511,28 @@ export function createSlidevAgentRuntime(config: AgentRuntimeConfig): SlidevAgen
             createdAt: timestamp(),
           })
         }
+      }
+
+      for (const change of changedFiles) {
+        if (change.action === 'deleted' || !change.path.endsWith('.md'))
+          continue
+
+        try {
+          const fileContent = await readFile(resolve(projectRef.rootDir, change.path), 'utf8')
+          validationWarnings.push(...detectDefaultSlotViolations(fileContent).map(warning => `${change.path}: ${warning}`))
+        }
+        catch (error) {
+          validationWarnings.push(`${change.path}: failed to validate markdown structure (${asErrorMessage(error)}).`)
+        }
+      }
+
+      if (validationWarnings.length) {
+        assistantText = [
+          assistantText,
+          '',
+          'Validation warnings:',
+          ...validationWarnings,
+        ].filter(Boolean).join('\n')
       }
 
       const assistantMessage: AgentMessage = {
@@ -537,11 +588,12 @@ export function createSlidevAgentRuntime(config: AgentRuntimeConfig): SlidevAgen
         projectId,
         threadId: latest.thread.id,
         runId,
-        type: piEnabled ? 'run.completed' : 'run.failed',
+        type: piEnabled && !validationWarnings.length ? 'run.completed' : 'run.failed',
         timestamp: timestamp(),
         payload: {
           messageCount: latest.thread.messages.length,
           piEnabled,
+          validationWarnings,
         },
       })
 

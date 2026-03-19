@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slidev Hub"
+  short_description: "Hub runtime, deploy, and validation guidance"
+  default_prompt: "Use $slidev-hub to work on a hub-managed deck, validate it through the hub, and debug presenter/runtime behavior."
